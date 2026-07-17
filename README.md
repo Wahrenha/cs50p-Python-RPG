@@ -14,12 +14,12 @@ The project is divided between a file that keeps the classes on which the mechan
 
 ## ⚙️ Core Classes & Modules
 
-* **`Dice` Class:** Creates an $N$-sided physical die using Python's `random` module, processing game elements like accuracy, damage rolls, healing, and stat-checks.
-* **`Armor` Class:** Handles armor attributes for different materials (Leather, Wood, Iron, Steel, Rebellion), mapping specific defense stats.
-* **`Weapon` Class:** Represents the multiple weapons (Bow, Fireball Scroll, Sword, Mace, Knife, Army Sword) featured, applying damage by custom dice categories (e.g., Bow rolls a `d12`, while a Knife rolls a `d8`).
-* **`Potions` Class:** Models consumable potions with unique effects (Healing, Strength, Quickness, Resistance, Super Healing), using custom combat boosts and automatic healing calculations.
-* **`Classe` Class:** Sets baseline character archetypes (Archer, Wizard, Warrior, Ogre, Thief) and stores their starting statistical profiles.
-* **`Character` Class:** The central object. It coordinates player metadata, dynamic stat updates, inventory, and core mechanics, such as attacking, leveling up, and receiving damage.
+* **`Dice`:** Creates an $N$-sided physical die using Python's `random` module, processing game elements like accuracy, damage rolls, healing, and stat-checks.
+* **`Armor`:** Handles armor attributes for different materials (Leather, Wood, Iron, Steel, Rebellion), mapping specific defense stats.
+* **`Weapon`:** Represents the multiple weapons (Bow, Fireball Scroll, Sword, Mace, Knife, Army Sword) featured, applying damage by custom dice categories (e.g., Bow rolls a `d12`, while a Knife rolls a `d8`).
+* **`Potions`:** Models consumable potions with unique effects (Healing, Strength, Quickness, Resistance, Super Healing), using custom combat boosts and automatic healing calculations.
+* **`Classe`:** Sets baseline character archetypes (Archer, Wizard, Warrior, Ogre, Thief) and stores their starting statistical profiles.
+* **`Character`:** The central object. It coordinates player metadata, dynamic stat updates, inventory, and core mechanics, such as attacking, leveling up, and receiving damage.
 
 ---
 
