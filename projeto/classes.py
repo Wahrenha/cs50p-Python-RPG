@@ -1,7 +1,7 @@
 from time import sleep
 import sys
+import textwrap
 import random
-import os
 
 #This code stores the classes for the game
 #The classes are Dice, Weapon, Potions, Classe, and Character
@@ -15,10 +15,6 @@ cyan = "\033[96m"
 blue = "\033[94m"
 
 DEBUG_MODE = True
-
-def clear_screen():
-    input("Press a button to continue.")
-    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 class Dice:
@@ -251,12 +247,20 @@ class Classe:
             raise ValueError("Inexistant class")
         self.stats = classe
         self.hp = classe
+        self.type = classe
 
 #   Classe str method returns the stats and hp related to each of the classes
 #   This method will probably not be used, but it is here just in case
 
     def __str__(self):
-        return f"{self.stats}, {self.hp}"
+        return self.type 
+
+    @property
+    def type(self):
+        return self._type
+    @type.setter
+    def type(self, classe):
+        self._type = classe
 
 #   stats method stores and defines the stats for each class
 #   Those will be the initial stats for every level 1 character
@@ -266,6 +270,7 @@ class Classe:
         return self._stats
     @stats.setter
     def stats(self, classe):
+    
         match classe:
             case "Archer":
                 stat = {
@@ -565,7 +570,7 @@ class Character():
 #   And if it is, the character has leveled up
         levels_gained = newlevel - self.level
         if want_print and newlevel != self.level:
-            print(f"\n\n{green}Congratulations!!! {self.name} has reached level {newlevel}!{reset}")
+            print(f"{green}Congratulations!!! {self.name} has reached level {newlevel}!{reset}")
             sleep(3)
 
 
@@ -638,14 +643,14 @@ class Character():
         self.hp = round(self.hp - damage, 2)
 
         if want_print:
-            print(f"\n{red}{self.name} took {damage} damage{reset}")
+            print(f"\n{red}{self.name} took {damage} damage{reset}\n")
             sleep(1)
 
             if self.hp <= 0:
-                print(f"{red}{self.name}'s hp is now 0\n{self.name} Died{reset}")
+                print(f"{red}{self.name}'s hp is now 0\n{self.name} Died{reset}\n")
                 sleep(1)
             else:
-                print(f"\n{self.name}'s hp is now {self.hp}")
+                print(f"{self.name}'s hp is now {self.hp}\n")
                 sleep(1)
 #   This part grants that, if the damage is greater than the character's hp, the character died
 
@@ -663,7 +668,7 @@ class Character():
             self.hp = self.max_hp
 
         if want_print:
-            print(f"\n{green}{self.name} healed {heal} hp and now has {self.hp} hp{reset}")
+            print(f"{green}{self.name} healed {heal} hp and now has {self.hp} hp{reset}\n")
 
 #   This method sets the character's inventory, initially empty
 #   When the inventory is modified, it isn't by this method, but modifying the values in the self._inventory variable
@@ -713,7 +718,7 @@ class Character():
         print(f"\n\n{cyan}Player's stats:\n")
         for i in statline:
             print(i.strip("'").strip().capitalize(), ":", statline[i])
-        print(f"{cyan}Protection: {protection}{reset}")
+        print(f"{cyan}Protection: {protection}{reset}\n")
 
 #   This method implements an item in the character's inventory
     def take_item(self, item, want_print=True):
@@ -750,7 +755,7 @@ class Character():
 
         elif type(item) == Weapon:
             if want_print:
-                print(f"{green}You took a {item}!!{reset}")
+                print(f"{green}You took a {item}!!{reset}\n")
                 sleep(1)
             if self.inventory["Weapon"]:
                 while True:
@@ -772,7 +777,7 @@ class Character():
 
         elif type(item) == Potions:
             if want_print:
-                print(f"{green}You took a {item}!!{reset}")
+                print(f"{green}You took a {item}!!{reset}\n")
                 sleep(1)
             potions_number =   0
             for i in self.inventory["Potions"]:
@@ -812,7 +817,7 @@ class Character():
             if coins == "coins":
                 n = int(n)
                 if want_print:
-                    print(f"{green}You took a {item}!!{reset}")
+                    print(f"{green}You took {item}!!{reset}\n")
                     sleep(1)
                 self.inventory["Money"] += n
             else:
@@ -938,9 +943,10 @@ def unlister(*args):
     return argument.strip("()")
 
 
-def print_slow(a, color=None):
+def print_slow(text, color=None, jumpline=True):
 
     c = ""
+    a = textwrap.fill(text, width=80, drop_whitespace=False)
     if color:
         match color:
             case "Red": c = red
@@ -965,5 +971,6 @@ def print_slow(a, color=None):
             sys.stdout.write(f"{c}{_}{reset}")
             sys.stdout.flush()
             sleep(0.04)
-    print("\n")
+    if jumpline:
+        print("\n")
 

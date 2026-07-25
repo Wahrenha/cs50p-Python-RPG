@@ -3,9 +3,11 @@
 #historia?
 #classes de personagens(mago, arqueiro), cada uma com danos diferentes vidas diferentes
 #classes: arqueiro, mago, guerreiro, ogro, ladrao
-from classes import Dice, Armor, Weapon, Potions, Classe, Character, Choice, print_slow, unlister, accuracy, clear_screen
+from classes import Dice, Armor, Weapon, Potions, Classe, Character, Choice, print_slow, unlister, accuracy
 from time import sleep
 import sys
+import os
+import textwrap
 import random
 import re
 
@@ -34,6 +36,111 @@ magenta = "\033[95m"
 cyan = "\033[96m"
 blue = "\033[94m"
 
+def print_header(player=None, jumplines=True):
+    print("=" * 80)
+    print(f"{cyan}{'PYTHON TERMINAL RPG':^80}{reset} ", sep="")
+    print("=" * 80)
+    if player: 
+        match player.classe.type:  
+            case "Archer":
+                emote = '🏹'
+            case "Wizard":
+                emote = '🧙‍♂️'
+            case "Warrior":
+                emote = '⚔️'
+            case "Ogre":
+                emote = '👹'
+            case "Thief": 
+                emote = '🕵️‍♀️'
+            case _: 
+                emote = 'erro'
+        player_status = f"{emote}   {player.name} (Lvl {player.level}) | ❤️ HP: {player.hp}/{player.max_hp}"
+        print(f"{player_status:^80}")
+    
+    if jumplines:
+        print("-" * 80)
+        print("\n")
+    else:
+        print("-" * 80, sep="")
+
+def clear_screen(player=None, jumplines = True):
+    input("Press a button to continue.")
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print_header(player, jumplines)
+
+def display_hud(player : Character, villain : Character = None, mode="battle"):
+    width = 80 
+    weapon = player.inventory['Weapon'].type if player.inventory['Weapon'] else "None"
+    armor = player.inventory['Armor'].type if player.inventory['Armor'] else "None"
+    potions = len(player.inventory['Potions'])
+    money = player.inventory['Money']
+
+    match mode:
+        case "battle":
+            if not villain:
+                raise ValueError("Battle HUD requires a villain!")
+            p_name = f"👤 {player.name} ({player.classe})" if hasattr(player, 'classe') else f"👤 {player.name}"
+            v_name = f"👹 {villain.name} ({villain.classe})"
+            
+            p_hp = f"❤️  HP: {player.hp}/{player.max_hp}"
+            v_hp = f"❤️  HP: {villain.hp}/{villain.max_hp}"
+            
+            p_prot = f"🛡️  Protection: {player.protection}"
+            v_prot = f"🛡️  Protection: {villain.protection}"
+            
+            p_pot = f"🧪 Potions: {len(player.inventory['Potions'])}/5"
+
+            
+            print(f"⚔️ {'BATTLE':^74} ⚔️")
+            print("-" * width)
+            print(f"{p_name:<38} │ {v_name:<38}")
+            print(f"{p_hp:<38} │ {v_hp:<38}")
+            print(f"{p_prot:<38} │ {v_prot:<38}")
+            print(f"{p_pot:<38} │")
+            print("=" * width)
+            print("\n")
+
+        case "commerce":
+            print(f"{'SHOP':^80}")
+            print("-" * width)
+            print(f"👤 {player.name:<12} | 💰 {money} coins")
+            print(f"⚔️  Weapon: {weapon:<10} | 🛡️  Armor: {armor:<10} | 🧪 Potions: {potions}/5")
+            print("=" * width)
+            print("\n")
+
+        case "chest":
+            print(f"{'CHEST':^80}")
+            print("-" * width)
+            print(f"👤 {player.name:<12} | 💰 {money} coins")
+            print(f"⚔️  Weapon: {weapon:<10} | 🛡️  Armor: {armor:<10} | 🧪 Potions: {potions}/5")
+            print("=" * width)
+            print("\n")
+
+        case "boss":
+            if not villain:
+                raise ValueError("Boss HUD requires a villain!")
+            tamanho_barra = 20
+            max_hp = villain.max_hp if villain.max_hp > 0 else 1 
+            proporcao = max(0, villain.hp) / max_hp
+            blocos_cheios = int(proporcao * tamanho_barra)
+            blocos_vazios = tamanho_barra - blocos_cheios
+            barra_str = f"{red}█{reset}" * blocos_cheios + "░" * blocos_vazios
+            p_name = f"👤 {player.name}"
+            p_hp = f"❤️  HP: {player.hp}/{player.max_hp}"
+            p_prot = f"🛡️  Protection: {player.protection}"
+            p_pot = f"🧪 Potions: {len(player.inventory['Potions'])}/5"
+            text = f"[{barra_str}]"
+            text2 = f"{villain.hp}/{villain.max_hp} HP"
+            print(f"👑 {villain.name.upper():^74} 👑")
+            print(f"{text:^80}")
+            print(f"{text2:^80}")
+            print("=" * width)
+            print(f"{p_name:<28} │ {p_prot:<28}")
+            print(f"{p_hp:<28} │ {p_pot:<28}")
+            print("-" * width)
+            print("\n")
+
+
 def drink_potion(character : Character,potion : Potions):
 
 #   Checking if the character has the refered potion, and gets the index of the potion in the inventory
@@ -53,19 +160,19 @@ def drink_potion(character : Character,potion : Potions):
 
         case "Strength":
             character.stats["strength"] += potion.effect
-            print(f"\n\n{magenta}Player's new strength is: {character.stats['strength']}{reset}")
+            print(f"{magenta}Player's new strength is: {character.stats['strength']}{reset}\n")
             potion_drank = "strength"
 
         case "Quickness":
             character.stats["agility"] += potion.effect
             potion_drank = "quickness"
-            print(f"\n\n{magenta}Player's new agility is: {character.stats['agility']}{reset}")
+            print(f"{magenta}Player's new agility is: {character.stats['agility']}{reset}\n")
 
         case "Resistance":
             character.stats["resistance"] += potion.effect
             potion_drank = "resistance"
             character.protection = character.stats
-            print(f"\n\n{magenta}Player's new resistance is: {character.stats['resistance']} and player's new protection is {character.protection}{reset}")
+            print(f"{magenta}Player's new resistance is: {character.stats['resistance']} and player's new protection is {character.protection}{reset}\n")
 
         case "Super Healing":
             max = character.max_hp
@@ -92,7 +199,9 @@ def player_action(player, villain, choice=None, do = None, choice_2 = None, nk =
                 choice = Choice(f"{cyan}What will you do?", "Attack", "Open Inventory", "Run")
             else:
                 choice = Choice(f"{cyan}What will you do?", "Attack", "Open Inventory")
-        clear_screen()
+        clear_screen(player,jumplines=False)
+        display_hud(player, villain, mode="battle")
+                        
 
         match choice:
 #   If the player chose to attack, the attack method will be called
@@ -123,6 +232,8 @@ def player_action(player, villain, choice=None, do = None, choice_2 = None, nk =
 
 #   Now, the player can choose between drinking a potion or going back
                 if not do:
+
+
                     do = Choice("What will you do?", "Drink Potion", "Go Back")
 
                 match do:
@@ -138,15 +249,21 @@ def player_action(player, villain, choice=None, do = None, choice_2 = None, nk =
                                     for i in player.inventory["Potions"]:
                                         player_potions.append(i)
                                     if len(player_potions) > 0:
+                                        clear_screen(player, jumplines=False)
+                                        display_hud(player, villain, mode="battle")
                                         choice_2 = Choice("What potion do you want?", *player_potions, "Go Back")
                                         if choice_2 == "Go Back":
                                             choice = None
                                             do = None
                                             action = "Go Back"
+                                            clear_screen(player, jumplines=False)
+                                            display_hud(player, villain, mode="battle")
                                             continue
                                         index = player.inventory["Potions"].index(choice_2)
                                         if drink_potion(player, player.inventory["Potions"][index]) == False:
                                             print_slow("You do not have any potions", "Red")
+                                            clear_screen(player, jumplines=False)
+                                            display_hud(player, villain, mode="battle")
                                             continue
                                         break
 
@@ -155,7 +272,9 @@ def player_action(player, villain, choice=None, do = None, choice_2 = None, nk =
                             choice = None
                             do = None
                             action = "Go Back"
-                            clear_screen()
+                            clear_screen(player, jumplines=False)
+                            display_hud(player, villain, mode="battle")
+                                            
                             continue
 
 #   If player chose to go back, the player's action will not be over yet, and he will go back to initial choice
@@ -163,6 +282,8 @@ def player_action(player, villain, choice=None, do = None, choice_2 = None, nk =
                         choice = None
                         do = None
                         action = "Go Back"
+                        clear_screen(player, jumplines=False)
+                        display_hud(player, villain, mode="battle")
                         continue
     return action
 
@@ -172,15 +293,14 @@ def battle(player, villain, xp, first = None, action=None):
 
 
     run = False
-    pturn = f"{player.name}'s turn:".upper()
-    vturn = f"{villain.name}'s turn:".upper()
+    pturn = f"{player.name}'s turn:\n".upper()
+    vturn = f"{villain.name}'s turn:\n".upper()
 
 #   The battle lasts while the player and oponnent are alive,
 #   and first it is set who attacks first, according to agility
-
+    stats = player.stats
     while not player.hp <= 0 and not villain.hp <= 0 and not run:
         if not first:
-
             if player.stats["agility"] < villain.stats["agility"]:
                 first = "villain"
             elif player.stats["agility"] >= villain.stats["agility"]:
@@ -192,7 +312,8 @@ def battle(player, villain, xp, first = None, action=None):
             if player.hp <= 0:
                 break
             elif not action:
-                clear_screen()
+                clear_screen(player, jumplines=False)
+                display_hud(player, villain, mode="battle")
                 print(cyan, pturn)
                 sleep(2)
                 Ran = player_action(player,villain)
@@ -208,7 +329,8 @@ def battle(player, villain, xp, first = None, action=None):
             if not action:
                 if player.hp <= 0 or villain.hp <= 0:
                     break
-                clear_screen()
+                clear_screen(player, jumplines=False)
+                display_hud(player, villain, mode="battle")
                 print(cyan, pturn)
                 sleep(2)
                 Ran_2 = player_action(player, villain)
@@ -222,7 +344,8 @@ def battle(player, villain, xp, first = None, action=None):
                 action
 
             if not villain.hp <= 0 and Ran_2 == False:
-                clear_screen()
+                clear_screen(player, jumplines=False)
+                display_hud(player, villain, mode="battle")
                 print(orange, vturn)
                 sleep(2)
                 villain.attack(player)
@@ -230,33 +353,19 @@ def battle(player, villain, xp, first = None, action=None):
 
 
     if player.hp <= 0:
-        sys.exit()
+        game_over(player)
     elif villain.hp <= 0:
+        player._stats = stats
+        clear_screen(player)
         player.get_xp(xp)
         d50 = Dice(50)
         n = d50.roll()
         player.take_item(f"{n} coins")
-        clear_screen()
+        clear_screen(player)
         return "Villain Died"
     else:
         return "Ran away"
 
-def cheat_menu(player):
-    print_slow("--- DEV CHEAT MENU ACTIVATED ---", "Magenta")
-    action = Choice("HACK:", "Give 1000 Gold", "Level Up", "Full Heal", "Kill Enemy (Next Hit)", "Exit")
-
-    match action:
-        case "Give 1000 Gold":
-            player.take_item("1000 coins")
-        case "Level Up":
-            player.get_xp(1000) # Isso força o level up
-        case "Full Heal":
-            player.heal(9999)
-        case "Kill Enemy (Next Hit)":
-            player.stats['strength'] = 999
-            print("One Punch Man mode activated.")
-        case "Exit":
-            pass
 
 def create_character(name = None, gender = None, age = None, classe = None):
 
@@ -272,7 +381,7 @@ def create_character(name = None, gender = None, age = None, classe = None):
                 name = input("Hello prisioner, what's your name? ").strip()
 
                 if name == "IDKFA": 
-                    print("Cheat mode enable...")
+                    print("\nCheat mode enable...")
                     player = Character("Admin", "Male", 30, "Warrior")
                     player.take_item("5000 coins")
                     player.stats["strength"] = 50
@@ -352,7 +461,6 @@ def create_character(name = None, gender = None, age = None, classe = None):
             clear_screen()
             classe_chosen.print_stats()
             sleep(3)
-            clear_screen()
             take = Choice("Are you sure?", "Yes", "No")
             if take == "Yes":
                 _classe = classe
@@ -392,12 +500,14 @@ def chest(player):
         num = itens.index(itens[number])
         itens.pop(num)
     a = unlister(content).strip("[],")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, mode="chest") 
     print_slow(f"You open the chest.", "Magenta")
-    sleep(2)
-    item_show = Choice("CHEST CONTENT:", content[0], content[1], content[2],  "leave chest")
+    sleep(2)   
+    item_show = Choice(f"{magenta}CHEST CONTENT:", content[0], content[1], content[2],  "leave chest")
     l = 0
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    
     while True:
 
 
@@ -405,7 +515,7 @@ def chest(player):
             break
 
         sleep(0.5)
-        print("\n", item_show.properties())
+        print(f"\n{item_show.properties()}")
         sleep(1)
 
         take = Choice("\nWill you take it?", "Yes", "No")
@@ -414,7 +524,8 @@ def chest(player):
             i = content.index(item_show)
             content.pop(i)
             l += 1
-            clear_screen()
+            clear_screen(player, jumplines=False)
+            display_hud(player, mode="chest")
             if l == 1:
                 item_show = Choice(f"{magenta}CHEST CONTENT:", content[0], content[1], "leave chest")
             if l == 2:
@@ -423,7 +534,8 @@ def chest(player):
                 break
 
         else:
-            clear_screen()
+            clear_screen(player, jumplines=False)
+            display_hud(player, mode="chest")
             if l == 0:
                 item_show = Choice(f"{magenta}CHEST CONTENT:", content[0], content[1], content[2],  "leave chest")
             if l == 1:
@@ -432,7 +544,7 @@ def chest(player):
                 item_show = Choice(f"{magenta}CHEST CONTENT:", content[0], "leave chest")
             if l == 3:
                 break
-        clear_screen()
+        clear_screen(player)
     coins = random.randint(10,100)
     coins = str(coins)
     player.take_item(f"{coins} coins")
@@ -441,9 +553,11 @@ def chest(player):
 def purchases(player, item_dict):
     options_list = [f"{item}: {price} coins" for item, price in item_dict.items()]
     options_list.append("Go Back")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, mode="commerce")
     choice_str = Choice("Select an item to buy:", *options_list)
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, mode="commerce")
     if choice_str == "Go Back":
         return
     
@@ -475,10 +589,9 @@ def commerce(player):
     items = [weapons, potions, armor]
 
     while True:
-        clear_screen()
-        print(f"\n\n{green}You have {player.inventory['Money']} coins{reset}")
+        clear_screen(player, jumplines=False)
+        display_hud(player, mode="commerce")
         cat_choice = Choice("What are you looking for?", "Weapons", "Potions", "Armors", "Go Back")
-        clear_screen()
         match cat_choice:
             case "Weapons":
                 purchases(player, weapons)
@@ -488,7 +601,7 @@ def commerce(player):
                 purchases(player, armor)
             case "Go Back":
                 break
-        clear_screen()
+        clear_screen(player, jumplines=False)
 
 def jack_battle(jack, player, text):
 
@@ -498,6 +611,8 @@ def jack_battle(jack, player, text):
     damage = int(damage)
     damage_taken = damage -  pro
     fail = False
+    clear_screen(player, jumplines=False)
+    display_hud(player, jack, mode="boss")
     print(f"{orange}\n\n{jack.name} tries to attack {player.name}{reset}")
     sleep(1)
 
@@ -518,6 +633,8 @@ def jack_battle(jack, player, text):
 
 
     while True:
+        clear_screen(player, jumplines=False)    
+        display_hud(player, jack, mode="boss")
         action = player_action(player, jack, nk=True)
         if action == True or action == False:
             print_slow("You can't run away from this fight.", 'Blue')
@@ -525,6 +642,8 @@ def jack_battle(jack, player, text):
             break
 
     if text:
+        clear_screen(player, jumplines=False)    
+        display_hud(player, jack, mode="boss")
         print_slow(f"Jack: \n\n{text}", 'Orange')
 
 def trainfight(player):
@@ -533,7 +652,7 @@ def trainfight(player):
     jack.take_item(Leather, want_print=False)
     change_stats(jack, 5, 5, 3, 4, 5, 2)
     print_slow("Jack:\nI'M SO EXCITED! HERE I GO!", 'Orange')
-    clear_screen()
+    clear_screen(player)
     jack_sentences = ["Nice one", "That was crazy", "Hey! you are actually a great fighter", "You must teach me how to fight sometime", "That was amazing", "Well done!"]
     winner = None
     while True:
@@ -557,10 +676,10 @@ def trainfight(player):
     if winner == "Player":
         sleep(3)
         print_slow("Jack: \n\nWOW! That was awesome! Totally deserved, Thank you sooo much!!!", 'Orange')
-        clear_screen()
+        clear_screen(player)
         sleep(2)
         print_slow("Jack: \n\nHere you go!! The coins I promised, and take these healing potions too, to recover from the fight!", 'Orange')
-        clear_screen()
+        clear_screen(player)
         sleep(2)
         player.take_item(Healing)
         player.take_item(Healing)
@@ -568,28 +687,28 @@ def trainfight(player):
         drink_potion(player, Healing)
         sleep(2)
         player.take_item("70 coins")
-        clear_screen()
+        clear_screen(player)
         print_slow("Jack: \n\nWell, see you around traveller! Nice to meet you!\n\n", 'Orange')
-        clear_screen()
+        clear_screen(player)
     elif winner == "Jack":
-        clear_screen()
+        clear_screen(player)
         sleep(3)
         print_slow("Jack: \nWOW! That was awesome! Thank you sooo much!!!", 'Orange')
-        clear_screen()
+        clear_screen(player)
         sleep(2)
         print_slow("Jack: \nI guess I'm actually stronger than I thought right hahahaha!", 'Orange')
         sleep(2)
         print_slow("Jack: \nHere you go!! Take these healing potions to recover from the fight!", 'Orange')
-        clear_screen()
+        clear_screen(player)
         sleep(2)
         player.take_item(Healing)
         player.take_item(Healing)
         drink_potion(player, Healing)
         drink_potion(player, Healing)
         sleep(2)
-        clear_screen()
+        clear_screen(player)
         print_slow("Jack: \nWell, see you around traveller! Nice to meet you! Better luck next time!")
-        clear_screen()
+        clear_screen(player)
 
 def guard_battle(player):
     general = Character("General Pippen", "Male", 50, "Warrior")
@@ -597,9 +716,10 @@ def guard_battle(player):
     general.take_item(Army, want_print=False)
     general.take_item(Healing, want_print=False)
     change_stats(general, 12, 8, 5, 12, 11, 15)
-    clear_screen()
+    clear_screen(player)
     print_slow("General Pippen:\n\n-YOU ARE DONE TRAVELLER YOUR TIME IN THIS WORLD IS UP!", "Red")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     action_1 = player_action(player, general)
     if action_1 == True or action_1 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
@@ -607,66 +727,78 @@ def guard_battle(player):
     else:
         print_slow("General Pippen:\n\n-YOU ARE WEAK TRAVELLER, THERE IS NOTHING YOU CAN DO AGAINST ME!", "Red")
     
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     print_slow("General Pippen:\n\n-I WILL END YOU PRETTY SOON TRAVELLER, BUT I LIKE PLAYING WITH MY FOOD HAHAHAHAHAH \n- BE CAREFUL WITH YOUR STEPS", "Red")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     action_2 = player_action(player, general)
     if action_2 == True or action_2 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-YOU FOOL, THERE IS NO GOING BACK!", "Red")
     else:
         print_slow("General Pippen:\n\n-DON'T YOU REALISE?? YOU ARE DOOMED!", "Red")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     print_slow("General Pippen:\n\n-I AM JUST SUPERIOR TO YOU TRAVELLER, YOU CAN'T EVEN SCRATCH MY ARMOR", 'Red')
-    clear_screen()
+    clear_screen(player)
+    display_hud(player, general, mode="boss")
     print_slow(f"{general.name} tries to attack {player.name}", 'Red')
     damage = round(player.hp/2)
     player.take_damage(damage)
-    clear_screen()
     print_slow("General Pippen:\n\n-STILL THINK YOU CAN BEAT ME, TRAVELLER?", 'Red')
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     action_3 = player_action(player, general)
     if action_3 == True or action_3 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-YOU CANNOT GET AWAY!", "Red")
     else:
         print_slow("General Pippen:\n\n-HAAHAHAHAHAHAHAHAHAHAHAHAHA", "Red")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     action_4 = player_action(player, general)
     if action_4 == True or action_4 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-...", "Red")
     else:
         print_slow("General Pippen:\n\n-...", "Red")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     action_5 = player_action(player, general)
     if action_5 == True or action_5 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n- ", "Red")
     else:
         print_slow("General Pippen:\n\n- ", "Red")
-    clear_screen()
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     if player_action(player, general) == True:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-That's enough traveller", "Red")
     else:
         print_slow("General Pippen:\n\n-That's enough traveller", "Red")
-    clear_screen()
+    clear_screen(player, jumplines=False) 
+    display_hud(player, general, mode="boss")
     general.take_item(Super, want_print=False)
     drink_potion(general, Super)
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     print_slow(f"{general.name} tries to attack {player.name}")
     damage = player.hp - 1
     player.take_damage(damage)
+    clear_screen(player, jumplines=False)
+    display_hud(player, general, mode="boss")
     print_slow("General Pippen:\n\n-It's over, it was an honorable fight traveller, but your time is up", "Red")
     print_slow("The General raises his sword, and your journey is over.", "Blue")
-    clear_screen()
+    clear_screen(player, jumplines=False)
     sleep(3)
     print_slow("However you hear a strange sound.", "Blue")
     sleep(2)
     print_slow("You look up and see tens of arrows that fly towards the General.", "Blue")
     sleep(2)
     print_slow("As you see he barely dodging and running away, a wind of hope crosses you.", "Blue")
-    clear_screen()
+    clear_screen(player, jumplines=False)
 
 def final_battle(player):
     kingattack = ["\nThe Royal Archers suddenly start shooting at the resistance.\n", "\nThe King's Ogre squad out of nowhere started throwing rocks from the walls of the fortress.\n", "\nThieves from the kingdom suddenly appeared at the fight in the King's side, and are now attacking the resistance.\n"]
@@ -694,7 +826,7 @@ def final_battle(player):
             print_slow(f"The Resistance suffered {event_damage} damage.", "Red")
 
         damage = 0
-        print(f"\n\nResistance hp: {armyshp}\nKing's Army hp: {kingsarmyhp}")
+        print(f"\n\nResistance hp: {armyshp}\nKing's Army hp: {kingsarmyhp}\n")
         if pattack:
             while damage < 70:
                 damage = d150.roll()
@@ -704,6 +836,7 @@ def final_battle(player):
                 damage = d70.roll()
         rdamage = 0
         choice = Choice(f"{cyan}What will you do?", "Attack the left", "Attack the right", "Attack the front", "Defend")
+        clear_screen(player)
         match choice:
             case "Attack the left":
                 if armysblindspot == "Left":
@@ -775,8 +908,8 @@ def final_battle(player):
         sleep(3)
     elif armyshp <= 0:
         sleep(2)
-        sys.exit(f"\n\n{red}The Resistance was defeated, and all the survivors were executed.{reset}")
-
+        print_slow(f"\n\n{red}The Resistance was defeated, and all the survivors were executed.{reset}")
+        game_over(player)
     print_slow("You are the leader of one of the squads in the raid, and you see villagers running for their lives.", "Orange")
     sleep(2)
     print_slow(f"John:\n\n-{player.name} stay here, stand your ground, my squad will be going in first.", "Orange")
@@ -801,21 +934,69 @@ def final_battle(player):
     roundgeneral = 0
     falas = ["Is that all you got? You pigs!", "You really think you can take me?", "My army is coming, they will end you. If I don't do that first...", "How many more are coming? You are not enough to fight me!", "HAHAHAHAH Good try!"]
     while general.hp > 0:
+        clear_screen(player, jumplines=False)
+        display_hud(player, general, mode="boss")
         player_action(player, general, run=False)
         if general.hp <= 0:
             break
+        clear_screen(player, jumplines=False)
+        display_hud(player, general, mode="boss")
+        player_action(player, general, run=False)
         print_slow("The resistance commanders join forces to attack the general\n", "Blue")
         dam = d30.roll()
         general.take_damage(dam)
         if general.hp <= 0:
             break
+        clear_screen(player, jumplines=False)
+        display_hud(player, general, mode="boss")
+        player_action(player, general, run=False)
         if roundgeneral % 2 == 0:
             print_slow(falas[random.randint(0,4)], "Red")
         general.attack(player)
         roundgeneral += 1
 
+def main_menu():
 
+    while True: 
+        clear_screen(jumplines=False)
+        print(cyan, sep="")
+        print(f"{'MAIN MENU':^80}")
+        line = "-"*80
+        choice = Choice(f"{line}", "Start Game", "How to play", "Credits", "Exit") 
+        match choice:
+            case "Start Game":
+                break
+            case "How to play":
+                clear_screen()
+                print(magenta)
+                text = "This is an interactive terminal RPG. Your actions are made through choices during the game, where you select your desired options pressing the respective number."
+                text2 = "The game features a turn-based combat, and has multiple paths you can engage in, according to the choices you make throughout the adventure."
+                text3 = "Make sure to manage your items well, and choose your actions wisely! GLHF!"
+                            
+                ftxt = textwrap.fill(text, width=80)
+                ftxt2 = textwrap.fill(text2, width=80)
+                ftxt3 = textwrap.fill(text3, width=80)
 
+                print(ftxt, "\n")
+                print(ftxt2, "\n")
+                print(ftxt3, "\n")
+
+            case "Credits":
+                print(orange)
+                clear_screen()
+                print(orange)
+                text = "This game was fully developed by me, Victor Wahrendorff, including the story and all the mechanics."
+                text2 = "Check my other projects in github.com/Wahrenha !"
+
+                ftxt = textwrap.fill(text, width=80)
+                ftxt2 = textwrap.fill(text2, width=80)
+
+                print(ftxt, "\n")
+                print(ftxt2, "\n")
+
+            case "Exit":
+                sys.exit("\nThank you for playing! Hope you enjoyed your experience!")
+            
 def story_1():
     clear_screen()
     print_slow("A long, long time ago, when the countries were not yet formed, and the nations as we know today didn't even exist, the world was composed of small villages and reigns. The Kingdom of the East was one of the most prominent in the continent, being ruled by the ruthless and brilliant mind of King Jordan, who expanded his kingdom to many lengths.", "Blue")
@@ -829,12 +1010,12 @@ def story_1():
     return player
 
 def story_2(player):
-    clear_screen()
+    clear_screen(player)
     print_slow("Just as expected, there it is. The knife you bought from the prison's dealer was outside in the hidden spot he chose.", "Blue")
     player.take_item(Knife)
     print_slow("As you leave the building to the fenced area outside, you spot a breach. A hole in the fence, in a part which was only being watched by one single guard. And the perfect chance to take him out.", "Blue")
     print_slow("You approach the guard, with your knife at your back, pretending to look for information, and jump him.", "Orange")
-    clear_screen()
+    clear_screen(player)
     guard = Character("guard", "Male", 40, "Thief")
     guard.take_damage(6,want_print=False)
     guard.take_item(Knife, want_print=False)
@@ -843,46 +1024,48 @@ def story_2(player):
     print_slow("After taking the guard out, you run without looking backwards, as fast as you can towards a forest nearby. The large amount of trees seems to hide you well and there you find a small cabin in the wild.", "Blue")
     print_slow("You try to look inside, but there is nothing to see. You turn around feeling defeated, and hear a sound in a busch by the side of the house.", "Blue")
     print_slow("An old man walks out of the trees, with what seems like a fascinated look to your face, an open mouth and a huge knife in his hands.", "Orange")
-    clear_screen()
-    print_slow("Stranger:\n\n-What? A prisioner??\n-Come in fast, don't let them see ya.", "Green")
-    clear_screen()
+    clear_screen(player)
+    print_slow("Stranger:\n\n-What? A prisioner??", "Green")
+    print_slow("-Come in fast, don't let them see ya.", "Green")
+    clear_screen(player)
     print_slow("You enter the cabin, it is small but very comfortable. There is a bed with a large chest on its side and what seems to be a kitchen in the other side of the room.", "Blue")
     print_slow("Stranger:\n\n-Have a look in the chest, there might be something to help you, and then sit down so I can give you a couple of healing potions. Drink one now, you look rough. Take the other with you.", 'Green')
-    clear_screen()
+    clear_screen(player)
     chest(player)
     print_slow("Stranger:\n\n-Here, take the healing potion.\n", 'Green')
-    clear_screen()
     healing = Potions("Healing")
     player.take_item(healing)
     player.take_item(healing)
     drink_potion(player, healing)
     if player.hp < 12:
         drink_potion(player, healing)
+    clear_screen(player)
     print_slow("Stranger:\n\n-Now leave. You shouldn't be here, do not tell anyone about this. You should head north where you will find the headquarters of the resistance army. Good luck!", 'Green')
-    clear_screen()
+    clear_screen(player)
     sleep(1)
 
 def story_3(player):
     print_slow("You leave the cabin and start heading north, feeling restored with the help of the old man and decided to fight the king with everything you got.", "Blue")
     print_slow("The forest is not an easy path and the trees hold you back along the way. \nSuddenly you hear some noise in the back.", "Orange")
-    clear_screen()
+    clear_screen(player)
     bandit = Character("Bandit", "Male", 25, "Thief")
     knife = Weapon("Knife")
     bandit.take_item(knife, want_print = False)
     change_stats(bandit, 2, 2, 3, 0, 3)
     bandit.take_damage(3, want_print = False)
-    battle(player, bandit, 200)
+    battle(player, bandit, 200, first="villain")
     print_slow("You won the battle against the bandit. Feeling stronger, you keep going in your journey.", "Blue")
     print_slow("Moving forward, you eventually stumble upon a fork in the way.", "Blue")
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     w_roll = Choice("Roll for intelligence to investigate the paths?", "Yes", "No")
     if w_roll == "Yes":
         intelligence = player.stats["inteligence"]
         intel_dice = Dice(intelligence)
         i_roll = intel_dice.roll()
+        clear_screen(player)
         sleep(2)
-        print_slow("The roll's result was: ", 'Blue')
+        print_slow("The roll's result was: ", 'Blue', jumpline=False)
         sleep(2)
         print_slow(f"{i_roll}\n", 'Blue')
         sleep(1)
@@ -896,16 +1079,17 @@ def story_3(player):
             sleep(2)
             print_slow("You investigate both ways, but do not see anything notable.", 'Blue')
             sleep(2)
-    clear_screen()
+    clear_screen(player)
     way = Choice("\n\nWhich way will you go?", "Right", "Left")
+    clear_screen(player)
     match way:
         case "Right":
             print_slow("You walk slowly through the dark woods, and you hear something moving.", "Orange")
             sleep(1)
-            print_slow("As you approach the source of the sounds, you find a", "Orange")
+            print_slow("As you approach the source of the sounds, you find a", "Orange", jumpline=False)
             sleep(2)
             print_slow(" Chest", "Orange")
-            clear_screen()
+            clear_screen(player)
             sleep(2)
             chest(player)
             print_slow("You keep moving through the forest hopeful to find the resistance, but as it is late at night, you decide to get some rest.", "Blue")
@@ -913,7 +1097,7 @@ def story_3(player):
             print_slow("You pass the night feeling scared with of noises of the forest, and do not manage to sleep well.", "Blue")
             sleep(1)
             print_slow("However, you still wake up feeling quite recovered", "Green")
-            clear_screen()
+            clear_screen(player)
             sleep(1)
             d8 = Dice(8)
             roll = d8.roll()
@@ -923,7 +1107,7 @@ def story_3(player):
         case "Left":
             print_slow("You follow a little source of light coming from the left way, and move through narrow spaces between trees.", "Blue")
             print_slow("As you come closer to the light, you realize that it is actually fire, that belonged to some campers.", "Orange")
-            clear_screen()
+            clear_screen(player)
             sleep(2)
             print_slow("You hear a sound and", "Orange")
             sleep(0.5)
@@ -945,36 +1129,34 @@ def story_3(player):
             print_slow("The fire and the calm of the tent makes you feel comfortable and safe, and you have a nice sleep.", "Blue")
             sleep(1)
             print_slow("You wake up feeling entirely recovered.\n", "Green")
-            clear_screen()
+            clear_screen(player)
             d12 = Dice(12)
             roll = d12.roll()
             player.heal(roll)
 
 def story_4(player):
 
-    print_slow("You walk.", 'Blue')
+    print_slow("You walk.", 'Blue', jumpline=False)
     sleep(1)
     print_slow(" A lot.", 'Blue')
     sleep(2)
     print_slow("The journey is really getting to your head, and the sight of the trees are starting to get obnoxious.", 'Blue')
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     print_slow("Stranger:\n\n-HEY! YOU THERE!", "Orange")
     sleep(2)
-    clear_screen()
     print_slow("Stranger:\n\n-HEY! SLOW DOWN! I WANT TO OFFER YOU SOMETHING!", 'Orange')
     sleep(1)
-    clear_screen()
+    clear_screen(player)
     print_slow("You wait for the stranger to get to you.", 'Blue')
     sleep(3)
     print_slow("Stranger:\n\n-HELLO! MY NAME IS JACK! DO YOU WANT TO FIGHT ME?", 'Orange')
     sleep(1)
-    clear_screen()
+    clear_screen(player)
     print_slow("Jack:\n\n-I know it sounds weird, but I really need to learn to fight. I will give you gold if you beat me, 70 coins, do we have a deal?", 'Orange')
     sleep(2)
-    clear_screen()
     fight = Choice("", "Yes", "No")
-    clear_screen()
+    clear_screen(player)
     if fight == "Yes":
         print_slow("Jack:\n\n-Let's do it then!", 'Orange')
         trainfight(player)
@@ -982,16 +1164,15 @@ def story_4(player):
         print_slow("Jack:\n\n-That is a shame, i'll keep looking around.", 'Orange')
 
     print_slow("You pack your things and continue your journey. \n\nAfter about a mile walking, you see the two ways converge, and a sign that had an arrow pointing forward and 1 Mile written below.", "Blue")
-    clear_screen()
     print_slow("Curious as to what it meant, you take that direction, and you discover that it was actually a trader that worked in that forest.", "Blue")
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     print_slow("Trader:\n\n-Hello traveler, may I help you with anything?", "Orange")
     print_slow("\n-I have all kinds of items, if you'd wanna have a look.", "Orange")
-    clear_screen()
+    sleep(2)
     print_slow("Trader:\n\n-The path upon you is tough, I'd take a look at the armors if I were you.", "Orange")
     commerce(player)
-    clear_screen()
+    clear_screen(player)
     print_slow("Trader:\n\n-If I were ya I would be careful from now on, drink some potions right now, just a tip.", "Orange")
     while True:
         if len(player.inventory["Potions"]) > 0:
@@ -1023,16 +1204,16 @@ def story_4(player):
             break
 
     print_slow("After your encounter with the trader, you keep going on, until you find a three way fork in the way.", "Blue")
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     w_roll = Choice("Roll for intelligence to investigate the paths?", "Yes", "No")
-    clear_screen()
+    clear_screen(player)
     if w_roll == "Yes":
         intelligence = player.stats["inteligence"]
         intel_dice = Dice(intelligence)
         i_roll = intel_dice.roll()
         sleep(2)
-        print_slow("The roll's result was: ", 'Blue')
+        print_slow("The roll's result was: ", 'Blue', jumpline=False)
         sleep(2)
         print_slow(f"{i_roll}\n", 'Blue')
         sleep(1)
@@ -1051,22 +1232,22 @@ def story_4(player):
             sleep(2)
             print_slow("You investigate, but do not see anything notable.", 'Blue')
             sleep(2)
-    clear_screen()
+    clear_screen(player)
     way = Choice("Which way are you heading?", "Northeast", "North", "Northwest")
-    clear_screen()
+    clear_screen(player)
     match way:
         case "Northeast":
             sleep(2)
             print_slow("You head northeast and you find a very bright little town.", "Blue")
             print_slow("For the amount of stores and houses, you figure it is way too empty, but you do not fear it.", "Blue")
             print_slow("However, as you keep walking, you hear a voice.", "Orange")
-            clear_screen()
+            clear_screen(player)
             sleep(2)
             print_slow("Stranger:\n\n-Look a traveller. Hey you! hand your items right now or you will regret it.", "Magenta")
             print_slow("You look back and see 3 thieves. They don't look very threatening, but they outnumber you.", "Orange")
-            clear_screen()
+            clear_screen(player)
             choice = Choice("What will you do?", "Fight them", "Hand your items")
-            clear_screen()
+            clear_screen(player)
             match choice:
                 case "Fight them":
                     thief_1 = Character("Thief 1", "Male", 20, "Thief")
@@ -1101,7 +1282,7 @@ def story_4(player):
                     print_slow("Thief:\n\n-HAHA! YOU LOSER!", "Red")
                     sleep(2)
                     print_slow("They walk away with all the items you fought hard to conquer.", "Blue")
-                    clear_screen()
+                    clear_screen(player)
 
 
         case "North":
@@ -1109,13 +1290,14 @@ def story_4(player):
             print_slow("You head north through a tough way in the forest. It looks very suspicious.", "Blue")
             print_slow("You keep moving until you hear some weird noises.", "Orange")
             print_slow("You stop to investigate and you actually hear a conversation, but see no one.", "Orange")
-            clear_screen()
+            clear_screen(player)
             sleep(2)
             print_slow("Stranger:\n\n-That is our last chance, we have to get him or our boss will kill us, we have no choice.", "Magenta")
-            clear_screen()
+            clear_screen(player)
             sleep(2)
             print_slow("Out of nowhere two masked wizards materialize in front of you, looking a bit frightened, but determined", "Magenta")
             print_slow("The younger one approaches you first.", "Blue")
+            clear_screen(player)
             y_wiz = Character("Younger Wizard", "Male", 18, "Wizard")
             y_wiz.take_item(Fireball, want_print=False)
             battle(player, y_wiz, 150)
@@ -1129,7 +1311,7 @@ def story_4(player):
             sleep(2)
             print_slow("You cannot help but feel bad for the family you just defeated, but you know you have to carry on.", "Blue")
             print_slow("You know the end is near.", "Orange")
-            clear_screen()
+            clear_screen(player)
         case "Northwest":
             sleep(2)
             print_slow("You head northwest and find a clear path in front of you, and suddenly feel like you're being followed.", "Blue")
@@ -1137,23 +1319,21 @@ def story_4(player):
             print_slow("This feeling follows you through the empty path and you start to feel paranoid about some forest noises.", "Blue")
             sleep(1)
             print_slow("You walk a lot and then you finally see it.", "Blue")
-            clear_screen()
             sleep(1)
             print_slow("As you approach a suspicious tree that has an arrow stuck in it, you know what to do.", "Blue")
             sleep(1)
             print_slow("However...", "Orange")
-            clear_screen()
+            clear_screen(player)
             sleep(2)
 
     if way != "Northwest":
             print_slow("You keep going on in your jorney, and ultimately head west in the forest path.", "Blue")
             print_slow("You walk a lot, and start feeling tired.")
-            clear_screen()
             sleep(1)
             print_slow("Everything around you starts to spin and suddenly, it is all black.", 'Blue')
             sleep(3)
             print_slow("You wake up in the next day, feeling a bit recovered!\n", "Cyan")
-            clear_screen()
+            clear_screen(player)
             d6 = Dice(6)
             player.heal(d6.roll())
             sleep(2)
@@ -1162,36 +1342,35 @@ def story_4(player):
             print_slow("Not sure if you are going insane, you keep on walking.", 'Orange')
             sleep(2)
             print_slow("However...", "Orange")
-            clear_screen()
+            clear_screen(player)
             sleep(2)
     print_slow("Two guards come out from behind the trees behind you.", "Orange")
     print_slow("You recognize their armor, they are a part of the high ranked army that responds only to the king himself.", "Orange")
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     print_slow("General:\n\n-THAT'S IT! WE KNEW YOU WOULD LEAD US TO THE RESISTANCE YOU FOOL!", "Red")
-    clear_screen()
     print_slow("High rank guard:\n\n-You really thought you could get away like that prisioner? We've been following you since the very start.", "Red")
     print_slow("-Surrender now prisoner and we will spare you for getting us all the way here.", "Red")
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     print_slow("You think back through your journey. You are close, very close, you know that, but the opponents look stronger than you.", "Blue")
     print_slow("You consider every option, but you have to make the ultimate choice.", "Blue")
-    clear_screen()
+    clear_screen(player)
     do = Choice("What will you do?", "Surrender", "Fight")
-    clear_screen()
+    clear_screen(player)
     match do:
         case "Surrender":
             sleep(2)
             print_slow("You get on your knees, with your hands on your head, and get taken away without resistance.", "Red")
-            sys.exit("\n\nYou surrendered and got back to the prison.")
+            print_slow("\n\nYou surrendered and got back to the prison.", "Red")
+            game_over(player)
             #end game
         case "Fight":
             print_slow("You find the courage to fight and resist.\n", "Cyan")
-            clear_screen()
-            print_slow("General:\n\n-HAHA! He thinks he can fight us... Go on Gray, take him down already.", "Red")
-            clear_screen()
             sleep(2)
-            print_slow("The smaller and lower ranked guard comes to you, with his sword held up.")
+            print_slow("General:\n\n-HAHA! He thinks he can fight us... Go on Gray, take him down already.", "Red")
+            sleep(2)
+            print_slow("The smaller and lower ranked guard comes to you, with his sword held up.", "Red")
             gray = Character("Gray", "Male", 25, "Warrior")
             gray.take_item(Army, want_print=False)
             gray.take_item(Iron, want_print=False)
@@ -1200,85 +1379,80 @@ def story_4(player):
     guard_battle(player)
     sleep(2)
     print_slow("Stranger:\n\n-Hello traveller, we have been expecting you.", "Green")
-    clear_screen()
     sleep(3)
     print_slow("Resistance archer:\n\n-Here, have this potions.\n", "Green")
-    clear_screen()
+    clear_screen(player)
     player.take_item(Super)
     player.take_item(Super)
     drink_potion(player, Super)
     sleep(2)
+    clear_screen(player)
     print_slow("Resistance soldier:\n\nHey! You fought with a lot of bravery! Defeating Gray was very impressive, but you are no longer alone!", "Green")
     print_slow("\nGray actually carried a letter written by the king himself, and it has a stamp showing the king's secret location. This is our golden chance!!", "Green")
     sleep(2)
-    clear_screen()
+    clear_screen(player)
     print_slow("Resistance soldier:\n\nCome with us traveller, we will take you to our headquarters, where you can get some rest and then join our council, this will be a very important one.", "Green")
-    clear_screen()
+    clear_screen(player)
     sleep(3)
     print_slow("You take some days to rest and get to know the headquartes. \n\nYou see the training fields and all the gear they have, and start to feel very confident about victory.", "Blue")
 
 def story_5(player):
-    clear_screen()
+    clear_screen(player)
     sleep(3)
     print_slow("The day of the council arrives, and you know that you are very requested", "Blue")
     sleep(2)
     print_slow("Resistance soldier:\n\nHey! Let's go, they are already waiting!", "Green")
     sleep(1)
-    clear_screen()
     print_slow("You follow him, and enter a very large room, with a ginourmous table in the middle, and about 10 people around it, all equipped with very strong armors.", "Blue")
     sleep(2)
     print_slow(f"Resistance leader:\n\n{player.name}! We have been expecting you! I'm John, the leader of the Resistance! Sit down! We have somethings to talk about!", "Green")
-    clear_screen()
     sleep(1)
     print_slow(f"John:\n\nAs we all know, {player.name} has done great things to get to us, and even getting us our most prized information: the king's location.", "Green")
-    clear_screen()
-    sleep(1)
-    clear_screen()
+    clear_screen(player)
     print_slow(f"John:\n\nTherefore, {player.name} has earned the right to join this council, as one of the commanders of the resistance! Here son, take this!\n", "Green")
     sleep(1)
     player.take_item(Rebellion)
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     print_slow(f"John:\n\nThis shall keep you safer from your enemies! Welcome {player.name}! But now, let's talk strategies.", "Green")
     sleep(3)
-    clear_screen()
     print_slow("You feel very accomplished for becoming a commander, and you and the council discuss the strategies of the invasion for hours on end.", "Blue")
     sleep(1)
     print_slow("Eventually, it is decided, the resistance will invade the king's secret fortress in 2 days, and you are in charge of commanding the infantry.\n\n", "Blue")
-    clear_screen()
+    clear_screen(player)
     sleep(5)
     print_slow("The day of the battle arrives. The troops are all ready, marching to the battlefield.\n", "Blue")
     print_slow("You could not be more nervous. This is what it all comes to, the final battle for freedom.", "Blue")
-    clear_screen()
+    clear_screen(player)
     sleep(2)
     print_slow("As one of the commanders, you ride your horse, leading your troops, and you finally identify the fortress.", "Orange")
     print_slow("You are leading the frontline, so it is time to begin the attacks.", "Orange")
-    clear_screen()
     sleep(2)
     print_slow("And now you cannot run.", "Red")
     sleep(3)
+    clear_screen(player)
     final_battle(player)
 
 def story_end(player):
     
-    clear_screen()
+    clear_screen(player)
     print_slow("O Genereal Pippen falls down in the stone cold floor...", "Blue")
     print_slow("The room goes completely silent. King Jordan is no longer laughing and he takes a step back.", "Orange")
-    clear_screen()
+    clear_screen(player)
     print_slow("King Jordan:\n\nPippen...", "Orange")
-    clear_screen()
+    clear_screen(player)
     print_slow("King Jordan:\n\nOld friend, they got you. I cannot leave it like this!", "Orange")
-    clear_screen()
+    clear_screen(player)
     print_slow("King Jordan tries to attack ", "Orange")
     sleep(0.5)
     print_slow("You desarm King Jordan before he can raise his sword!", "Green")
     print_slow("The King falls to the floor, desperately looking for a weapon he can defend himself with", "Blue")
-    clear_screen()
+    clear_screen(player)
     print_slow("Suddenly, the King's face closes, and he looks inaprehensive.", "Orange")
     print_slow("King Jordan:\n\nYou won son, deal with me as you must. You are a great warrior, you could do a great general, now that Pippen is gone...", "Orange")
-    clear_screen()
+    clear_screen(player)
     print_slow("Your sword is ponting to his face as the entire room is staring at you, waiting for your decision.", "Orange")
-    clear_screen()
+    clear_screen(player)
     
     
     # O grande menu de decisão usando a sua função Choice
@@ -1288,25 +1462,25 @@ def story_end(player):
         "Arrest Jordan and let the people decide his fate",
         "Execute him."
     )
-    clear_screen()
+    clear_screen(player)
     match decisao_final:
         case "Accept Jordan's offer":
             print_slow("You retrieve your sword and offer your hand to the King.", "Green")
             print_slow("Jordan smiles, and gladly takes your hand", "Green")
-            clear_screen()
+            clear_screen(player)
             print_slow("However, as his hand grabs yours, you feel a blood fluid in your back", "Orange")
-            clear_screen()
+            clear_screen(player)
             print_slow("You realize it is blood as you remove the arrow that hit you.", "Red")
-            clear_screen()
+            clear_screen(player)
             print_slow(f"Resistance Commander:\n\nI'm sorry {player.name}, but you really thought you could betray us?", "Red")
-            clear_screen()
+            clear_screen(player)
             print_slow("You look around, and none of your soldiers approach to help.", "Red")
             print_slow("You can only watch as the commander executes King Jordan in front of you.", "Red")
-            clear_screen()
-            print_slow("And then, it all turns black.", "Red")
-            print(". ")
+            clear_screen(player)
+            print_slow("And then, it all turns black.", "Red", sep="")
+            print(". ", sep="")
             sleep(1)
-            print(". ")
+            print(". ", sep="")
             sleep(1)
             print(". ")
             sleep(1)
@@ -1314,9 +1488,9 @@ def story_end(player):
         case "Arrest Jordan and let the people decide his fate":
             print_slow("The commander:\n\nThat ends now Jordan.", "Red")
             print_slow("As he draws his sword, you raise your arms, and everybody stops.", "Red")
-            clear_screen()
+            clear_screen(player)
             print_slow("You:\n\nThe King is defeated. We do not have the right to decide his faith. Let the people judge him for his crimes.", "Orange")
-            clear_screen()
+            clear_screen(player)
             print_slow("The commander advances towards you, but your soldiers surround him.", "Red")
             print_slow("You signal to your soldiers, that quickly handcuff him and take him away, along with the commander.", "Blue")
             print_slow("You take the fallen crown in your hand, more uncertain than ever about the future.", "Blue")
@@ -1324,21 +1498,30 @@ def story_end(player):
         case "Execute him.":
             print_slow("You see Jordan in the floor and John is all you think about.", "Red")
             print_slow("You are filled with rage...", "Red")
-            clear_screen()
+            clear_screen(player)
             print_slow("You:\n\nYou killed him. You showed no mercy. This ends now.", "Red")
-            clear_screen()
+            clear_screen(player)
             print_slow("You raise yout sword and drops it right in Jordan's chest.", "Red")
             print_slow("The dead king's face turn completely white as the whole room stars at what you did.", "Red")
             print_slow("You pick up the fallen crown. Everyone fears you now.", "Red")
 
-    # Encerramento gracioso e créditos do jogo
-    clear_screen()
-    print(f"\n{cyan}==================================================")
-    print(f"This is the end of {player.name}'s story!")
-    print(" Thank you for playing!")
-    print(f"=================================================={reset}")
-    
-    sys.exit()
+
+def game_over(player):
+    clear_screen(player, jumplines=False)
+    message = f"This is the end of {player.name}'s story"
+    print(red)
+    print(f"{'GAME OVER':^80}")
+    print("="*80)
+    print(f"{message}:^80")
+    print("-"*80)
+    clear_screen(None)
+    continua = Choice("What now?", "Play again", "Exit")
+    match continua:
+        case "Play again":
+            pass
+        case "Exit":
+            sys.exit("Thank you for playing!")
+
 
     #adicionar menu principal para começo do jogo e pra quando morrer
 
@@ -1352,10 +1535,7 @@ def story_end(player):
         #  Wizard: weakness spell (o inimigo da 50% menos dano nos proximos tres turnos)
         #  Archer: Sharpenss arrow ( vc corre para tras e usa flechas maiores e mais afiadas. o inimigo gasta um turno pra chegar ate voce e seus proximos tres ataques atravessam protecoes)
 
-
     #balance classes
-
-
 
     # format right the texts
 # compactar codigo no final
@@ -1363,15 +1543,22 @@ def story_end(player):
 #print the current round
 
 def main():
-
-    player = story_1()
-    #player = Character("victor", "Male", 18, "Warrior")
-    #villain = Character("Thief", "Male", 43, "Thief")
-    story_2(player)
-    story_3(player)
-    story_4(player)
-    story_5(player)
-    story_end(player)
+    print(cyan) 
+    print("=" * 80)
+    print(f"{'Welcome!':^80}")
+    print("This is a Terminal RPG made from scratch in Python as the final project for CS50p.")
+    print("This game was made with a love of care, and I hope you enjoy your experience.")
+    print(f"{'Have fun!':^80}")
+    print("=" * 80, reset)
+    while True:
+        main_menu()
+        player = story_1()
+        story_2(player)
+        story_3(player)
+        story_4(player)
+        story_5(player)
+        story_end(player)
+        game_over(player)
 
 if __name__ == "__main__":
     main()
