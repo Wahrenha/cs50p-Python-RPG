@@ -36,6 +36,9 @@ magenta = "\033[95m"
 cyan = "\033[96m"
 blue = "\033[94m"
 
+class RestartGame(Exception):
+    pass
+
 def print_header(player=None, jumplines=True):
     print("=" * 80)
     print(f"{cyan}{'PYTHON TERMINAL RPG':^80}{reset} ", sep="")
@@ -124,20 +127,71 @@ def display_hud(player : Character, villain : Character = None, mode="battle"):
             proporcao = max(0, villain.hp) / max_hp
             blocos_cheios = int(proporcao * tamanho_barra)
             blocos_vazios = tamanho_barra - blocos_cheios
-            barra_str = f"{red}█{reset}" * blocos_cheios + "░" * blocos_vazios
+            blocos_vermelhos = f"{red}{'█' * blocos_cheios}{reset}"
+            blocos_vazios_str = "░" * blocos_vazios
+            health_bar = f"[{blocos_vermelhos}{blocos_vazios_str}] {villain.hp}/{villain.max_hp} HP"
             p_name = f"👤 {player.name}"
             p_hp = f"❤️  HP: {player.hp}/{player.max_hp}"
             p_prot = f"🛡️  Protection: {player.protection}"
             p_pot = f"🧪 Potions: {len(player.inventory['Potions'])}/5"
-            text = f"[{barra_str}]"
+            health_bar_size = 2 + tamanho_barra + 1 + len(str(villain.hp)) + 1 + len(str(villain.max_hp)) + 3
+            espacos_esq = " " * ((80 - health_bar_size) // 2)
+            text = f"{espacos_esq}{health_bar}"
             text2 = f"{villain.hp}/{villain.max_hp} HP"
             print(f"👑 {villain.name.upper():^74} 👑")
-            print(f"{text:^80}")
+            print(f"{text}")
             print(f"{text2:^80}")
             print("=" * width)
             print(f"{p_name:<28} │ {p_prot:<28}")
             print(f"{p_hp:<28} │ {p_pot:<28}")
             print("-" * width)
+            print("\n")
+
+        case "final":   
+            if not villain:
+                raise ValueError("Boss HUD requires a villain!")
+            tamanho_barra = 20
+
+            v_max_hp = villain.max_hp if villain.max_hp > 0 else 1 
+            r_max_hp = player.max_hp if player.max_hp > 0 else 1
+
+            v_proporcao = max(0, villain.hp) / v_max_hp
+            r_proporcao = max(0, player.hp) / r_max_hp
+
+            r_blocos_cheios = int(r_proporcao * tamanho_barra)
+            v_blocos_cheios = int(v_proporcao * tamanho_barra)
+
+            r_blocos_vazios = tamanho_barra - r_blocos_cheios
+            r_blocos_vermelhos = f"{red}{'█' * r_blocos_cheios}{reset}"
+            r_blocos_vazios_str = "░" * r_blocos_vazios
+            r_health_bar = f"[{r_blocos_vermelhos}{r_blocos_vazios_str}] {player.hp}/{player.max_hp} HP"
+
+            v_blocos_vazios = tamanho_barra - v_blocos_cheios
+            v_blocos_vermelhos = f"{red}{'█' * v_blocos_cheios}{reset}"
+            v_blocos_vazios_str = "░" * v_blocos_vazios
+            v_health_bar = f"[{v_blocos_vermelhos}{v_blocos_vazios_str}] {villain.hp}/{villain.max_hp} HP"
+
+            r_health_bar_size = 2 + tamanho_barra + 1 + len(str(player.hp)) + 1 + len(str(player.max_hp)) + 3
+            v_health_bar_size = 2 + tamanho_barra + 1 + len(str(villain.hp)) + 1 + len(str(villain.max_hp)) + 3
+
+            r_espacos_esq = " " * ((80 - r_health_bar_size) // 2)
+            v_espacos_esq = " " * ((80 - v_health_bar_size) // 2)
+
+            text = f"{r_espacos_esq}{r_health_bar}"
+            text2 = f"{player.hp}/{player.max_hp} HP"
+
+            text3 = f"{v_espacos_esq}{v_health_bar}"
+            text4 = f"{villain.hp}/{villain.max_hp} HP"
+                        
+            print(f"⚔️ {player.name.upper():^74} ⚔️")
+            print(f"{text}")
+            print(f"{text2:^80}")
+            print("=" * width)
+
+            print(f"👑 {villain.name.upper():^74} 👑")
+            print(f"{text3}")
+            print(f"{text4:^80}")
+            print("=" * width)
             print("\n")
 
 
@@ -176,7 +230,9 @@ def drink_potion(character : Character,potion : Potions):
 
         case "Super Healing":
             max = character.max_hp
-            character.heal(max)
+            hp = character.hp
+            heal = max-hp
+            character.heal(heal)
             potion_drank = "super healing"
 
 #   Takes the potion out of the character's inventory
@@ -214,7 +270,7 @@ def player_action(player, villain, choice=None, do = None, choice_2 = None, nk =
                 action = "player attacked"
                 break
 
-#   If the player chose to run, the player has a 1 in 10 chance to suceed
+#   If the player chose to run, the player has a 1 in 5 chance to suceed
 
             case "Run":
 
@@ -288,7 +344,7 @@ def player_action(player, villain, choice=None, do = None, choice_2 = None, nk =
     return action
 
 
-def battle(player, villain, xp, first = None, action=None):
+def battle(player, villain, xp, first = None):
 
 
 
@@ -298,7 +354,7 @@ def battle(player, villain, xp, first = None, action=None):
 
 #   The battle lasts while the player and oponnent are alive,
 #   and first it is set who attacks first, according to agility
-    stats = player.stats
+    stats = player.stats.copy()
     while not player.hp <= 0 and not villain.hp <= 0 and not run:
         if not first:
             if player.stats["agility"] < villain.stats["agility"]:
@@ -306,44 +362,42 @@ def battle(player, villain, xp, first = None, action=None):
             elif player.stats["agility"] >= villain.stats["agility"]:
                 first = "player"
         if first == "villain":
+            clear_screen(player, jumplines=False)
+            display_hud(player, villain)
             print(orange, vturn)
             sleep(2)
             villain.attack(player)
             if player.hp <= 0:
                 break
-            elif not action:
-                clear_screen(player, jumplines=False)
-                display_hud(player, villain, mode="battle")
-                print(cyan, pturn)
-                sleep(2)
-                Ran = player_action(player,villain)
-                if Ran == True:
-                    print_slow("You ran away", "Green")
-                    run = True
-                elif Ran == False:
-                    print_slow("You tried to run away, but failed.", "Red")
-            else:
-                action
+
+            clear_screen(player, jumplines=False)
+            display_hud(player, villain, mode="battle")
+            print(cyan, pturn)
+            sleep(2)
+            Ran = player_action(player,villain)
+            if Ran == True:
+                print_slow("You ran away", "Green")
+                run = True
+            elif Ran == False:
+                print_slow("You tried to run away, but failed.", "Red")
 
         elif first == "player":
-            if not action:
-                if player.hp <= 0 or villain.hp <= 0:
-                    break
-                clear_screen(player, jumplines=False)
-                display_hud(player, villain, mode="battle")
-                print(cyan, pturn)
-                sleep(2)
-                Ran_2 = player_action(player, villain)
-                if Ran_2 == True:
-                    print_slow("You ran away", "Green")
-                    sleep(1)
-                    run = True
-                elif Ran_2 == False:
-                    print_slow("You tried to run away, but failed.", "Red")
-            else:
-                action
+        
+            if player.hp <= 0 or villain.hp <= 0:
+                break
+            clear_screen(player, jumplines=False)
+            display_hud(player, villain, mode="battle")
+            print(cyan, pturn)
+            sleep(2)
+            Ran_2 = player_action(player, villain)
+            if Ran_2 == True:
+                print_slow("You ran away", "Green")
+                sleep(1)
+                run = True
+            elif Ran_2 == False:
+                print_slow("You tried to run away, but failed.", "Red")
 
-            if not villain.hp <= 0 and Ran_2 == False:
+            if not villain.hp <= 0 and Ran_2 != True:
                 clear_screen(player, jumplines=False)
                 display_hud(player, villain, mode="battle")
                 print(orange, vturn)
@@ -356,6 +410,7 @@ def battle(player, villain, xp, first = None, action=None):
         game_over(player)
     elif villain.hp <= 0:
         player._stats = stats
+        player.protection = player.stats
         clear_screen(player)
         player.get_xp(xp)
         d50 = Dice(50)
@@ -364,6 +419,8 @@ def battle(player, villain, xp, first = None, action=None):
         clear_screen(player)
         return "Villain Died"
     else:
+        player._stats = stats
+        player.protection = player.stats
         return "Ran away"
 
 
@@ -378,7 +435,7 @@ def create_character(name = None, gender = None, age = None, classe = None):
 #   Those conditions are secured by the re.search use
             if not name:
 
-                name = input("Hello prisioner, what's your name? ").strip()
+                name = input("Hello prisoner, what's your name? ").strip()
 
                 if name == "IDKFA": 
                     print("\nCheat mode enable...")
@@ -452,7 +509,7 @@ def create_character(name = None, gender = None, age = None, classe = None):
 #   Finally setting the class of the character, the player must choose between the existant classes
         if not classe:
             sleep(0.5)
-            aclasse = Choice("To what class do you belong prisioner?", "Archer 🏹", "Wizard 🧙‍♂️", "Warrior ⚔️", "Ogre 👹", "Thief 🕵️‍♀️")
+            aclasse = Choice("To what class do you belong prisoner?", "Archer 🏹", "Wizard 🧙‍♂️", "Warrior ⚔️", "Ogre 👹", "Thief 🕵️‍♀️")
             sleep(0.5)
             classe, a = aclasse.split(" ")
             classe_chosen = Classe(classe)
@@ -485,6 +542,7 @@ def change_stats(character: Character, s, agi, i, r, aim, level=None):
                     "resistance" : r,
                     "aim" : aim
                        }
+    character.protection = character.stats
     if level:
 
         character.level_up(level,want_print=False)
@@ -520,9 +578,9 @@ def chest(player):
 
         take = Choice("\nWill you take it?", "Yes", "No")
         if take == "Yes":
-            player.take_item(item_show)
+            took = player.take_item(item_show)
             i = content.index(item_show)
-            content.pop(i)
+            if took: content.pop(i)
             l += 1
             clear_screen(player, jumplines=False)
             display_hud(player, mode="chest")
@@ -574,9 +632,10 @@ def purchases(player, item_dict):
         if player.inventory["Money"] >= selected_price:
             confirm = Choice(f"Buy {selected_item} for {selected_price} coins?", "Yes", "No")
             if confirm == "Yes":
-                player.inventory["Money"] -= selected_price
-                player.take_item(selected_item)
-                print_slow(f"Transaction successful! Remaining balance: {player.inventory['Money']}", "Green")
+                took = player.take_item(selected_item)
+                if took:
+                    player.inventory["Money"] -= selected_price
+                    print_slow(f"Transaction successful! Remaining balance: {player.inventory['Money']}", "Green")
         else:
             print_slow("You don't have enough money!", "Red")
 
@@ -610,6 +669,7 @@ def jack_battle(jack, player, text):
     pro = int(pro)
     damage = int(damage)
     damage_taken = damage -  pro
+    if damage_taken < 0: damage_taken = 0
     fail = False
     clear_screen(player, jumplines=False)
     display_hud(player, jack, mode="boss")
@@ -626,7 +686,7 @@ def jack_battle(jack, player, text):
 
         if damage_taken >= player.hp:
             player.take_damage(player.hp - 1)
-            print_slow(f"Mac{player.name} lost.", 'Red')
+            print_slow(f"{player.name} lost.", 'Red')
             return "L"
         else:
             player.take_damage(damage_taken)
@@ -652,8 +712,7 @@ def trainfight(player):
     jack.take_item(Leather, want_print=False)
     change_stats(jack, 5, 5, 3, 4, 5, 2)
     print_slow("Jack:\nI'M SO EXCITED! HERE I GO!", 'Orange')
-    clear_screen(player)
-    jack_sentences = ["Nice one", "That was crazy", "Hey! you are actually a great fighter", "You must teach me how to fight sometime", "That was amazing", "Well done!"]
+    jack_sentences = ["Nice one", "That was crazy", "Hey! you are actually a great fighter", "You must teach me how to fight sometime", "That was amazing!", "Well done!"]
     winner = None
     while True:
         if jack.hp > 1:
@@ -683,8 +742,10 @@ def trainfight(player):
         sleep(2)
         player.take_item(Healing)
         player.take_item(Healing)
-        drink_potion(player, Healing)
-        drink_potion(player, Healing)
+        if Healing in player.inventory["Potions"]:
+            drink_potion(player, Healing)
+        if Healing in player.inventory["Potions"] and player.hp < player.max_hp - 3:
+            drink_potion(player, Healing)
         sleep(2)
         player.take_item("70 coins")
         clear_screen(player)
@@ -703,8 +764,10 @@ def trainfight(player):
         sleep(2)
         player.take_item(Healing)
         player.take_item(Healing)
-        drink_potion(player, Healing)
-        drink_potion(player, Healing)
+        if Healing in player.inventory["Potions"]:
+            drink_potion(player, Healing)
+        if Healing in player.inventory["Potions"] and player.hp < player.max_hp - 3:
+            drink_potion(player, Healing)
         sleep(2)
         clear_screen(player)
         print_slow("Jack: \nWell, see you around traveller! Nice to meet you! Better luck next time!")
@@ -720,7 +783,7 @@ def guard_battle(player):
     print_slow("General Pippen:\n\n-YOU ARE DONE TRAVELLER YOUR TIME IN THIS WORLD IS UP!", "Red")
     clear_screen(player, jumplines=False)
     display_hud(player, general, mode="boss")
-    action_1 = player_action(player, general)
+    action_1 = player_action(player, general, nk=True)
     if action_1 == True or action_1 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-YOU REALLY THINK YOU CAN GET AWAY??", "Red")
@@ -732,7 +795,7 @@ def guard_battle(player):
     print_slow("General Pippen:\n\n-I WILL END YOU PRETTY SOON TRAVELLER, BUT I LIKE PLAYING WITH MY FOOD HAHAHAHAHAH \n- BE CAREFUL WITH YOUR STEPS", "Red")
     clear_screen(player, jumplines=False)
     display_hud(player, general, mode="boss")
-    action_2 = player_action(player, general)
+    action_2 = player_action(player, general, nk=True)
     if action_2 == True or action_2 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-YOU FOOL, THERE IS NO GOING BACK!", "Red")
@@ -749,7 +812,7 @@ def guard_battle(player):
     print_slow("General Pippen:\n\n-STILL THINK YOU CAN BEAT ME, TRAVELLER?", 'Red')
     clear_screen(player, jumplines=False)
     display_hud(player, general, mode="boss")
-    action_3 = player_action(player, general)
+    action_3 = player_action(player, general, nk=True)
     if action_3 == True or action_3 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-YOU CANNOT GET AWAY!", "Red")
@@ -757,7 +820,7 @@ def guard_battle(player):
         print_slow("General Pippen:\n\n-HAAHAHAHAHAHAHAHAHAHAHAHAHA", "Red")
     clear_screen(player, jumplines=False)
     display_hud(player, general, mode="boss")
-    action_4 = player_action(player, general)
+    action_4 = player_action(player, general, nk=True)
     if action_4 == True or action_4 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-...", "Red")
@@ -765,7 +828,7 @@ def guard_battle(player):
         print_slow("General Pippen:\n\n-...", "Red")
     clear_screen(player, jumplines=False)
     display_hud(player, general, mode="boss")
-    action_5 = player_action(player, general)
+    action_5 = player_action(player, general, nk=True)
     if action_5 == True or action_5 == False:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n- ", "Red")
@@ -773,7 +836,7 @@ def guard_battle(player):
         print_slow("General Pippen:\n\n- ", "Red")
     clear_screen(player, jumplines=False)
     display_hud(player, general, mode="boss")
-    if player_action(player, general) == True:
+    if player_action(player, general, nk=True) == True:
         print_slow("You try to run away, but the general outpaces you", "Orange")
         print_slow("General Pippen:\n\n-That's enough traveller", "Red")
     else:
@@ -797,15 +860,21 @@ def guard_battle(player):
     sleep(2)
     print_slow("You look up and see tens of arrows that fly towards the General.", "Blue")
     sleep(2)
-    print_slow("As you see he barely dodging and running away, a wind of hope crosses you.", "Blue")
+    print_slow("You see as he barely dodges and runs away, and a wind of hope crosses you.", "Blue")
     clear_screen(player, jumplines=False)
 
 def final_battle(player):
     kingattack = ["\nThe Royal Archers suddenly start shooting at the resistance.\n", "\nThe King's Ogre squad out of nowhere started throwing rocks from the walls of the fortress.\n", "\nThieves from the kingdom suddenly appeared at the fight in the King's side, and are now attacking the resistance.\n"]
-    happened = ["\nResistance Archers are shooting the right side of the army.\n", "\nResistance Wizards are shooting fireballs at the left side of the army.\n", "\nThe Resistance Chivalry is attacking the back of the army.\n", "\nYou overhear the opposite commandant ordering a powerful attack.\n"]
+    happened = ["\nResistance Archers are shooting the right side of the army.\n", "\nResistance Wizards are shooting fireballs at the left side of the army.\n", "\nThe Resistance Cavalry is attacking the back of the army.\n", "\nYou overhear the opposite commandant ordering a powerful attack.\n"]
     rounds = 0
-    kingsarmyhp = 1000
-    armyshp = 1000
+    resistance_army = Character("The Resistance", "Male", 30, "Warrior")
+    resistance_army.max_hp = 1000
+    resistance_army.hp = 1000
+
+    king_army = Character("Jordan's Army", "Male", 30, "Warrior")
+    king_army.max_hp = 1000
+    king_army.hp = 1000
+
     armysblindspot = ""
     damage = 0
     rdamage = 0
@@ -816,17 +885,17 @@ def final_battle(player):
     d70 = Dice(70)
     d50 = Dice(50)
     d20 = Dice(20)
-    while armyshp > 0 and kingsarmyhp > 0:
+    while resistance_army.hp > 0 and king_army.hp > 0:
         if rounds != 0 and rounds%3 == 0:
             event = kingattack[random.randint(0,2)]
             print_slow(event, "Red")
             event_damage = 0
             while event_damage < 30:
                 event_damage = d70.roll()
+            resistance_army.hp -= event_damage
             print_slow(f"The Resistance suffered {event_damage} damage.", "Red")
 
         damage = 0
-        print(f"\n\nResistance hp: {armyshp}\nKing's Army hp: {kingsarmyhp}\n")
         if pattack:
             while damage < 70:
                 damage = d150.roll()
@@ -835,41 +904,44 @@ def final_battle(player):
             while damage < 20:
                 damage = d70.roll()
         rdamage = 0
+        clear_screen(player, jumplines=False)
+        display_hud(resistance_army, king_army, mode="final")
         choice = Choice(f"{cyan}What will you do?", "Attack the left", "Attack the right", "Attack the front", "Defend")
-        clear_screen(player)
+        clear_screen(player, jumplines=False)
+        display_hud(resistance_army, king_army, mode="final")
         match choice:
             case "Attack the left":
                 if armysblindspot == "Left":
-                    while rdamage < 40:
-                        rdamage = d100.roll()
+                    while rdamage < 70:
+                        rdamage = d150.roll()
                     print_slow("You hit the army's weak spot, causing more damage.", "Green")
                 else:
-                    while rdamage < 10:
-                        rdamage = d50.roll()
+                    while rdamage < 20:
+                        rdamage = d70.roll()
                 print_slow("Your troops attack succesfully through the left side of the opposite army\n\n", "Green")
-                kingsarmyhp -= rdamage
+                king_army.hp -= rdamage
                 print_slow(f"The attack dealt {rdamage} damage\n\n", "Green")
             case "Attack the right":
                 if armysblindspot == "Right":
-                    while rdamage < 40:
-                        rdamage = d100.roll()
+                    while rdamage < 70:
+                        rdamage = d150.roll()
                     print_slow("You hit the army's weak spot, causing more damage.", "Green")
                 else:
-                    while rdamage < 10:
-                        rdamage = d50.roll()
+                    while rdamage < 20:
+                        rdamage = d70.roll()
                 print_slow("Your troops attack succesfully through the right side of the opposite army\n\n", "Green")
-                kingsarmyhp -= rdamage
+                king_army.hp -= rdamage
                 print_slow(f"The attack dealt {rdamage} damage\n\n", "Green")
             case "Attack the front":
                 if armysblindspot == "Front":
-                    while rdamage < 40:
-                        rdamage = d100.roll()
+                    while rdamage < 70:
+                        rdamage = d150.roll()
                     print_slow("You hit the army's weak spot, causing more damage.", "Green")
                 else:
-                    while rdamage < 10:
-                        rdamage = d50.roll()
+                    while rdamage < 20:
+                        rdamage = d70.roll()
                 print_slow("Your troops attack succesfully through the front side of the opposite army\n\n", "Green")
-                kingsarmyhp -= rdamage
+                king_army.hp -= rdamage
                 print_slow(f"The attack dealt {rdamage} damage\n\n", "Green")
             case "Defend":
                 reduce_d = 0
@@ -881,12 +953,12 @@ def final_battle(player):
                     damage -= reduce_d
                 print_slow("Your troops defend themselves from the opponent's attack, mitigating the damage\n\n", "Green")
         happen = happened[random.randint(0,3)]
-        if armyshp > 0 and kingsarmyhp > 0:
-            armyshp -= damage
+        if resistance_army.hp > 0 and king_army.hp > 0:
+            resistance_army.hp -= damage
             print_slow("The royal army strikes the resistance with an attack.", "Red")
             print_slow(f"The resistance army suffered {damage} damage.\n", "Red")
             sleep(1.5)
-            if armyshp > 0 :
+            if resistance_army.hp > 0 :
                 print_slow(happen, "Green")
         match happen:
             case "\nResistance Archers are shooting the right side of the army.\n":
@@ -902,14 +974,17 @@ def final_battle(player):
         sleep(1.5)
         #print(frases[rounds])
         rounds += 1
-    if kingsarmyhp <= 0:
+    if king_army.hp <= 0:
         sleep(2)
         print_slow("The resistance defeated the army, and is now raiding the fortress, with the commanders leading the way.", "Cyan")
         sleep(3)
-    elif armyshp <= 0:
+    elif resistance_army.hp <= 0:
         sleep(2)
+        clear_screen()
         print_slow(f"\n\n{red}The Resistance was defeated, and all the survivors were executed.{reset}")
         game_over(player)
+
+    clear_screen(player)
     print_slow("You are the leader of one of the squads in the raid, and you see villagers running for their lives.", "Orange")
     sleep(2)
     print_slow(f"John:\n\n-{player.name} stay here, stand your ground, my squad will be going in first.", "Orange")
@@ -917,7 +992,7 @@ def final_battle(player):
     sleep(2)
     print_slow("-AAAHHHHHH", "Green")
     sleep(1)
-    print_slow("HAHAHAHAHAHHAHAH! YOU REALLY TOUGHT IT WAS OVER JOHN?", "Red")
+    print_slow("HAHAHAHAHAHHAHAH! YOU REALLY THOUGHT IT WAS OVER JOHN?", "Red")
     sleep(1)
     print_slow("As you hear those voices, you rush to the fortress, and make your way in the main room of the castle.", "Orange")
     sleep(1)
@@ -931,7 +1006,7 @@ def final_battle(player):
     general.take_item(Army, want_print=False)
     general.take_item(Healing, want_print=False)
     change_stats(general, 12, 8, 5, 12, 11, 15)
-    roundgeneral = 0
+    roundgeneral = 1
     falas = ["Is that all you got? You pigs!", "You really think you can take me?", "My army is coming, they will end you. If I don't do that first...", "How many more are coming? You are not enough to fight me!", "HAHAHAHAH Good try!"]
     while general.hp > 0:
         clear_screen(player, jumplines=False)
@@ -941,68 +1016,30 @@ def final_battle(player):
             break
         clear_screen(player, jumplines=False)
         display_hud(player, general, mode="boss")
-        player_action(player, general, run=False)
-        print_slow("The resistance commanders join forces to attack the general\n", "Blue")
-        dam = d30.roll()
-        general.take_damage(dam)
+        if roundgeneral % 3 == 0:
+            print_slow("The resistance commanders join forces to attack the general\n", "Blue")
+            dam = d30.roll()
+            general.take_damage(dam)
+            clear_screen(player, jumplines=False)
+            display_hud(player, general, mode="boss")
+
         if general.hp <= 0:
             break
-        clear_screen(player, jumplines=False)
-        display_hud(player, general, mode="boss")
-        player_action(player, general, run=False)
         if roundgeneral % 2 == 0:
             print_slow(falas[random.randint(0,4)], "Red")
+        clear_screen(player, jumplines=False)
+        display_hud(player, general, mode="boss")
         general.attack(player)
+        if player.hp <= 0:
+            game_over(player)
         roundgeneral += 1
 
-def main_menu():
-
-    while True: 
-        clear_screen(jumplines=False)
-        print(cyan, sep="")
-        print(f"{'MAIN MENU':^80}")
-        line = "-"*80
-        choice = Choice(f"{line}", "Start Game", "How to play", "Credits", "Exit") 
-        match choice:
-            case "Start Game":
-                break
-            case "How to play":
-                clear_screen()
-                print(magenta)
-                text = "This is an interactive terminal RPG. Your actions are made through choices during the game, where you select your desired options pressing the respective number."
-                text2 = "The game features a turn-based combat, and has multiple paths you can engage in, according to the choices you make throughout the adventure."
-                text3 = "Make sure to manage your items well, and choose your actions wisely! GLHF!"
-                            
-                ftxt = textwrap.fill(text, width=80)
-                ftxt2 = textwrap.fill(text2, width=80)
-                ftxt3 = textwrap.fill(text3, width=80)
-
-                print(ftxt, "\n")
-                print(ftxt2, "\n")
-                print(ftxt3, "\n")
-
-            case "Credits":
-                print(orange)
-                clear_screen()
-                print(orange)
-                text = "This game was fully developed by me, Victor Wahrendorff, including the story and all the mechanics."
-                text2 = "Check my other projects in github.com/Wahrenha !"
-
-                ftxt = textwrap.fill(text, width=80)
-                ftxt2 = textwrap.fill(text2, width=80)
-
-                print(ftxt, "\n")
-                print(ftxt2, "\n")
-
-            case "Exit":
-                sys.exit("\nThank you for playing! Hope you enjoyed your experience!")
-            
 def story_1():
     clear_screen()
     print_slow("A long, long time ago, when the countries were not yet formed, and the nations as we know today didn't even exist, the world was composed of small villages and reigns. The Kingdom of the East was one of the most prominent in the continent, being ruled by the ruthless and brilliant mind of King Jordan, who expanded his kingdom to many lengths.", "Blue")
     print_slow("Although King Jordan had plenty success with his plans of domination and expansion, he had a big amount of enemies, people who were seeking to overthrow him at all costs. \n\nKing Jordan started to become paranoid of such actions, and took immediate caution to arrest those involved.", "Blue")
     clear_screen()
-    print_slow("However, not all of those arrested had something to do with the threats of coups, and lots of inocent people and political enemies were inprisioned as well.", "Blue")
+    print_slow("However, not all of those arrested had something to do with the threats of coups, and lots of innocent people and political enemies were imprisioned as well.", "Blue")
     print_slow('Alongside some friends, you, a villager with much more knowledge of combat than the usual citizen of the kingdom, found yourself in one of those prisons, sentenced unfairly to treason, for simply trying to protect a friend who was being arrested.', "Blue")
     print_slow('You wait in what seems like an infinite line to the much awaited day of working outside, when you finally reach the guard.', "Blue")
     clear_screen()
@@ -1015,29 +1052,28 @@ def story_2(player):
     player.take_item(Knife)
     print_slow("As you leave the building to the fenced area outside, you spot a breach. A hole in the fence, in a part which was only being watched by one single guard. And the perfect chance to take him out.", "Blue")
     print_slow("You approach the guard, with your knife at your back, pretending to look for information, and jump him.", "Orange")
-    clear_screen(player)
     guard = Character("guard", "Male", 40, "Thief")
     guard.take_damage(6,want_print=False)
     guard.take_item(Knife, want_print=False)
     change_stats(guard, 2,2,2,2,2,1)
     battle(player, guard, 50, first = "player")
     print_slow("After taking the guard out, you run without looking backwards, as fast as you can towards a forest nearby. The large amount of trees seems to hide you well and there you find a small cabin in the wild.", "Blue")
-    print_slow("You try to look inside, but there is nothing to see. You turn around feeling defeated, and hear a sound in a busch by the side of the house.", "Blue")
+    print_slow("You try to look inside, but there is nothing to see. You turn around feeling defeated, and hear a sound in a bush by the side of the house.", "Blue")
     print_slow("An old man walks out of the trees, with what seems like a fascinated look to your face, an open mouth and a huge knife in his hands.", "Orange")
     clear_screen(player)
-    print_slow("Stranger:\n\n-What? A prisioner??", "Green")
+    print_slow("Stranger:\n\n-What? A prisoner??", "Green")
     print_slow("-Come in fast, don't let them see ya.", "Green")
     clear_screen(player)
     print_slow("You enter the cabin, it is small but very comfortable. There is a bed with a large chest on its side and what seems to be a kitchen in the other side of the room.", "Blue")
     print_slow("Stranger:\n\n-Have a look in the chest, there might be something to help you, and then sit down so I can give you a couple of healing potions. Drink one now, you look rough. Take the other with you.", 'Green')
-    clear_screen(player)
     chest(player)
     print_slow("Stranger:\n\n-Here, take the healing potion.\n", 'Green')
     healing = Potions("Healing")
     player.take_item(healing)
     player.take_item(healing)
-    drink_potion(player, healing)
-    if player.hp < 12:
+    if healing in player.inventory["Potions"]:
+        drink_potion(player, healing)
+    if player.hp < 12 and healing in player.inventory["Potions"]:
         drink_potion(player, healing)
     clear_screen(player)
     print_slow("Stranger:\n\n-Now leave. You shouldn't be here, do not tell anyone about this. You should head north where you will find the headquarters of the resistance army. Good luck!", 'Green')
@@ -1047,14 +1083,16 @@ def story_2(player):
 def story_3(player):
     print_slow("You leave the cabin and start heading north, feeling restored with the help of the old man and decided to fight the king with everything you got.", "Blue")
     print_slow("The forest is not an easy path and the trees hold you back along the way. \nSuddenly you hear some noise in the back.", "Orange")
-    clear_screen(player)
     bandit = Character("Bandit", "Male", 25, "Thief")
     knife = Weapon("Knife")
     bandit.take_item(knife, want_print = False)
     change_stats(bandit, 2, 2, 3, 0, 3)
     bandit.take_damage(3, want_print = False)
-    battle(player, bandit, 200, first="villain")
-    print_slow("You won the battle against the bandit. Feeling stronger, you keep going in your journey.", "Blue")
+    result = battle(player, bandit, 200, first="villain")
+    if result == "Villain Died":
+        print_slow("You won the battle against the bandit. Feeling stronger, you keep going in your journey.", "Blue")
+    else:
+        print_slow("You escaped the bandit and kept going on your way.", "Blue")
     print_slow("Moving forward, you eventually stumble upon a fork in the way.", "Blue")
     clear_screen(player)
     sleep(2)
@@ -1070,7 +1108,7 @@ def story_3(player):
         print_slow(f"{i_roll}\n", 'Blue')
         sleep(1)
         if i_roll >= 5:
-            print_slow("You succeded!", "Green")
+            print_slow("You succeeded!", "Green")
             sleep(2)
             print_slow("You look more closely, and notice huge yet subtle footsteps, leading to the left way.", 'Blue')
             sleep(2)
@@ -1089,12 +1127,11 @@ def story_3(player):
             print_slow("As you approach the source of the sounds, you find a", "Orange", jumpline=False)
             sleep(2)
             print_slow(" Chest", "Orange")
-            clear_screen(player)
             sleep(2)
             chest(player)
             print_slow("You keep moving through the forest hopeful to find the resistance, but as it is late at night, you decide to get some rest.", "Blue")
             sleep(2)
-            print_slow("You pass the night feeling scared with of noises of the forest, and do not manage to sleep well.", "Blue")
+            print_slow("You pass the night feeling scared of noises of the forest, and do not manage to sleep well.", "Blue")
             sleep(1)
             print_slow("However, you still wake up feeling quite recovered", "Green")
             clear_screen(player)
@@ -1109,11 +1146,11 @@ def story_3(player):
             print_slow("As you come closer to the light, you realize that it is actually fire, that belonged to some campers.", "Orange")
             clear_screen(player)
             sleep(2)
-            print_slow("You hear a sound and", "Orange")
+            print_slow("You hear a sound and", "Orange", jumpline=False)
             sleep(0.5)
-            print_slow(".", "Orange")
+            print_slow(".", "Orange", jumpline=False)
             sleep(0.5)
-            print_slow(".", "Orange")
+            print_slow(".", "Orange", jumpline=False)
             sleep(0.5)
             print_slow(".", "Orange")
             sleep(0.5)
@@ -1163,7 +1200,8 @@ def story_4(player):
     else:
         print_slow("Jack:\n\n-That is a shame, i'll keep looking around.", 'Orange')
 
-    print_slow("You pack your things and continue your journey. \n\nAfter about a mile walking, you see the two ways converge, and a sign that had an arrow pointing forward and 1 Mile written below.", "Blue")
+    print_slow("You pack your things and continue your journey.", "Blue")
+    print_slow("After about a mile walking, you see the two ways converge, and a sign that had an arrow pointing forward and 1 Mile written below.", "Blue")
     print_slow("Curious as to what it meant, you take that direction, and you discover that it was actually a trader that worked in that forest.", "Blue")
     clear_screen(player)
     sleep(2)
@@ -1203,8 +1241,8 @@ def story_4(player):
             action = "Go Back"
             break
 
-    print_slow("After your encounter with the trader, you keep going on, until you find a three way fork in the way.", "Blue")
     clear_screen(player)
+    print_slow("After your encounter with the trader, you keep going on, until you find a three way fork in the way.", "Blue")
     sleep(2)
     w_roll = Choice("Roll for intelligence to investigate the paths?", "Yes", "No")
     clear_screen(player)
@@ -1218,7 +1256,7 @@ def story_4(player):
         print_slow(f"{i_roll}\n", 'Blue')
         sleep(1)
         if i_roll >= 5:
-            print_slow("You succeded!", "Green")
+            print_slow("You succeeded!", "Green")
             sleep(2)
             print_slow("You look more closely, and notice something weird.", 'Blue')
             sleep(2)
@@ -1243,7 +1281,8 @@ def story_4(player):
             print_slow("However, as you keep walking, you hear a voice.", "Orange")
             clear_screen(player)
             sleep(2)
-            print_slow("Stranger:\n\n-Look a traveller. Hey you! hand your items right now or you will regret it.", "Magenta")
+            print_slow("Stranger:\n\n-Look a traveller!", "Magenta")
+            print_slow("Hey you! hand your items right now or you will regret it.","Magenta")
             print_slow("You look back and see 3 thieves. They don't look very threatening, but they outnumber you.", "Orange")
             clear_screen(player)
             choice = Choice("What will you do?", "Fight them", "Hand your items")
@@ -1252,17 +1291,17 @@ def story_4(player):
                 case "Fight them":
                     thief_1 = Character("Thief 1", "Male", 20, "Thief")
                     thief_1.take_item(Knife, want_print=False)
-                    change_stats(thief_1, 7, 5, 9, 20, 7)
+                    change_stats(thief_1, 4, 5, 9, 10, 7)
                     battle(player, thief_1, 200)
                     print_slow("Thief:\n\n-NOOOO WHAT DID YOU DO!", "Red")
                     thief_2 = Character("Thief 2", "Male", 20, "Thief")
                     thief_2.take_item(Knife, want_print=False)
-                    change_stats(thief_2, 7, 5, 9, 20, 7)
+                    change_stats(thief_2, 3, 4, 9, 10, 7)
                     battle(player, thief_2, 200)
                     print_slow("Thief:\n\n-WHAT, HOW CAN YOU DO THAT?? YOU ARE DEAD NOW!", "Red")
                     thief_3 = Character("Thief 3", "Male", 20, "Thief")
                     thief_3.take_item(Knife, want_print=False)
-                    change_stats(thief_3, 7, 5, 9, 20, 7)
+                    change_stats(thief_3, 3, 3, 9, 10, 7)
                     battle(player, thief_3, 300)
                     sleep(2)
                     print_slow("You defeated your enemies, but are still feeling wounded.", "Blue")
@@ -1302,7 +1341,7 @@ def story_4(player):
             y_wiz.take_item(Fireball, want_print=False)
             battle(player, y_wiz, 150)
             print_slow("Older Wizard:\n\n-WHAT..? NOOO!! YOU KILLED MY SON", "Red")
-            print_slow("The second wizard jumps straight into you and their mask drops reavealing an adult woman, with tears of anger in her face.", "Blue")
+            print_slow("The second wizard jumps straight into you and their mask drops revealing an adult woman, with tears of anger in her face.", "Blue")
             old_wiz = Character("Wizard", "Female", 30, "Wizard")
             old_wiz.take_item(Fireball, want_print=False)
             battle(player, old_wiz, 400)
@@ -1327,7 +1366,7 @@ def story_4(player):
             sleep(2)
 
     if way != "Northwest":
-            print_slow("You keep going on in your jorney, and ultimately head west in the forest path.", "Blue")
+            print_slow("You keep going on in your journey, and ultimately head west in the forest path.", "Blue")
             print_slow("You walk a lot, and start feeling tired.")
             sleep(1)
             print_slow("Everything around you starts to spin and suddenly, it is all black.", 'Blue')
@@ -1349,7 +1388,7 @@ def story_4(player):
     clear_screen(player)
     sleep(2)
     print_slow("General:\n\n-THAT'S IT! WE KNEW YOU WOULD LEAD US TO THE RESISTANCE YOU FOOL!", "Red")
-    print_slow("High rank guard:\n\n-You really thought you could get away like that prisioner? We've been following you since the very start.", "Red")
+    print_slow("High rank guard:\n\n-You really thought you could get away like that prisoner? We've been following you since the very start.", "Red")
     print_slow("-Surrender now prisoner and we will spare you for getting us all the way here.", "Red")
     clear_screen(player)
     sleep(2)
@@ -1384,7 +1423,8 @@ def story_4(player):
     clear_screen(player)
     player.take_item(Super)
     player.take_item(Super)
-    drink_potion(player, Super)
+    if Super in player.inventory["Potions"]:
+        drink_potion(player, Super)
     sleep(2)
     clear_screen(player)
     print_slow("Resistance soldier:\n\nHey! You fought with a lot of bravery! Defeating Gray was very impressive, but you are no longer alone!", "Green")
@@ -1394,7 +1434,7 @@ def story_4(player):
     print_slow("Resistance soldier:\n\nCome with us traveller, we will take you to our headquarters, where you can get some rest and then join our council, this will be a very important one.", "Green")
     clear_screen(player)
     sleep(3)
-    print_slow("You take some days to rest and get to know the headquartes. \n\nYou see the training fields and all the gear they have, and start to feel very confident about victory.", "Blue")
+    print_slow("You take some days to rest and get to know the headquarters. \n\nYou see the training fields and all the gear they have, and start to feel very confident about victory.", "Blue")
 
 def story_5(player):
     clear_screen(player)
@@ -1403,9 +1443,9 @@ def story_5(player):
     sleep(2)
     print_slow("Resistance soldier:\n\nHey! Let's go, they are already waiting!", "Green")
     sleep(1)
-    print_slow("You follow him, and enter a very large room, with a ginourmous table in the middle, and about 10 people around it, all equipped with very strong armors.", "Blue")
+    print_slow("You follow him, and enter a very large room, with a ginormous table in the middle, and about 10 people around it, all equipped with very strong armors.", "Blue")
     sleep(2)
-    print_slow(f"Resistance leader:\n\n{player.name}! We have been expecting you! I'm John, the leader of the Resistance! Sit down! We have somethings to talk about!", "Green")
+    print_slow(f"Resistance leader:\n\n{player.name}! We have been expecting you! I'm John, the leader of the Resistance! Sit down! We have some things to talk about!", "Green")
     sleep(1)
     print_slow(f"John:\n\nAs we all know, {player.name} has done great things to get to us, and even getting us our most prized information: the king's location.", "Green")
     clear_screen(player)
@@ -1436,22 +1476,22 @@ def story_5(player):
 def story_end(player):
     
     clear_screen(player)
-    print_slow("O Genereal Pippen falls down in the stone cold floor...", "Blue")
+    print_slow("General Pippen falls down in the stone cold floor...", "Blue")
     print_slow("The room goes completely silent. King Jordan is no longer laughing and he takes a step back.", "Orange")
     clear_screen(player)
     print_slow("King Jordan:\n\nPippen...", "Orange")
-    clear_screen(player)
+    sleep(2)
     print_slow("King Jordan:\n\nOld friend, they got you. I cannot leave it like this!", "Orange")
     clear_screen(player)
     print_slow("King Jordan tries to attack ", "Orange")
     sleep(0.5)
-    print_slow("You desarm King Jordan before he can raise his sword!", "Green")
+    print_slow("You disarm King Jordan before he can raise his sword!", "Green")
     print_slow("The King falls to the floor, desperately looking for a weapon he can defend himself with", "Blue")
     clear_screen(player)
-    print_slow("Suddenly, the King's face closes, and he looks inaprehensive.", "Orange")
+    print_slow("Suddenly, the King's face closes, and he looks reckless.", "Orange")
     print_slow("King Jordan:\n\nYou won son, deal with me as you must. You are a great warrior, you could do a great general, now that Pippen is gone...", "Orange")
-    clear_screen(player)
-    print_slow("Your sword is ponting to his face as the entire room is staring at you, waiting for your decision.", "Orange")
+    sleep(2)
+    print_slow("Your sword is pointing to his face as the entire room is staring at you, waiting for your decision.", "Orange")
     clear_screen(player)
     
     
@@ -1477,48 +1517,98 @@ def story_end(player):
             print_slow("You look around, and none of your soldiers approach to help.", "Red")
             print_slow("You can only watch as the commander executes King Jordan in front of you.", "Red")
             clear_screen(player)
-            print_slow("And then, it all turns black.", "Red", sep="")
-            print(". ", sep="")
+            print_slow("And then, it all turns black.", "Red",jumpline=False)
+            print(". ", end="")
             sleep(1)
-            print(". ", sep="")
+            print(". ", end="")
             sleep(1)
             print(". ")
             sleep(1)
+            return False
             
         case "Arrest Jordan and let the people decide his fate":
-            print_slow("The commander:\n\nThat ends now Jordan.", "Red")
+            print_slow("The commander:\nThat ends now Jordan.", "Red")
             print_slow("As he draws his sword, you raise your arms, and everybody stops.", "Red")
-            clear_screen(player)
-            print_slow("You:\n\nThe King is defeated. We do not have the right to decide his faith. Let the people judge him for his crimes.", "Orange")
+            sleep(2)
+            print_slow("You:\n\nThe King is defeated. We do not have the right to decide his fate. Let the people judge him for his crimes.", "Orange")
             clear_screen(player)
             print_slow("The commander advances towards you, but your soldiers surround him.", "Red")
             print_slow("You signal to your soldiers, that quickly handcuff him and take him away, along with the commander.", "Blue")
             print_slow("You take the fallen crown in your hand, more uncertain than ever about the future.", "Blue")
-            
+            return True
+        
         case "Execute him.":
             print_slow("You see Jordan in the floor and John is all you think about.", "Red")
             print_slow("You are filled with rage...", "Red")
             clear_screen(player)
             print_slow("You:\n\nYou killed him. You showed no mercy. This ends now.", "Red")
             clear_screen(player)
-            print_slow("You raise yout sword and drops it right in Jordan's chest.", "Red")
-            print_slow("The dead king's face turn completely white as the whole room stars at what you did.", "Red")
+            print_slow("You raise your sword and drop it right in Jordan's chest.", "Red")
+            print_slow("The dead king's face turn completely white as the whole room stares at what you did.", "Red")
             print_slow("You pick up the fallen crown. Everyone fears you now.", "Red")
+            return True
 
+def main_menu():
 
-def game_over(player):
-    clear_screen(player, jumplines=False)
+    while True: 
+        clear_screen(jumplines=False)
+        print(cyan, end="")
+        print(f"{'MAIN MENU':^80}")
+        line = "-"*80
+        choice = Choice(f"{line}", "Start Game", "How to play", "Credits", "Exit") 
+        match choice:
+            case "Start Game":
+                break
+            case "How to play":
+                clear_screen()
+                print(magenta)
+                text = "This is an interactive terminal RPG. Your actions are made through choices during the game, where you select your desired options pressing the respective number."
+                text2 = "The game features a turn-based combat, and has multiple paths you can engage in, according to the choices you make throughout the adventure."
+                text3 = "Make sure to manage your items well, and choose your actions wisely! GLHF!"
+                            
+                ftxt = textwrap.fill(text, width=80)
+                ftxt2 = textwrap.fill(text2, width=80)
+                ftxt3 = textwrap.fill(text3, width=80)
+
+                print(ftxt, "\n")
+                print(ftxt2, "\n")
+                print(ftxt3, "\n")
+
+            case "Credits":
+                print(orange)
+                clear_screen()
+                print(orange)
+                text = "This game was fully developed by me, Victor Wahrendorff, including the story and all the mechanics."
+                text2 = "Check my other projects in github.com/Wahrenha !"
+
+                ftxt = textwrap.fill(text, width=80)
+                ftxt2 = textwrap.fill(text2, width=80)
+
+                print(ftxt, "\n")
+                print(ftxt2, "\n")
+
+            case "Exit":
+                sys.exit("\nThank you for playing! Hope you enjoyed your experience!")
+            
+def game_over(player, won=False):
+    clear_screen(None, jumplines=False)
     message = f"This is the end of {player.name}'s story"
-    print(red)
-    print(f"{'GAME OVER':^80}")
+    
+    if won:
+        print(green, end="")
+        print(f"{'CONGRATULATIONS!!':^80}")
+    else:
+        print(red, end="")
+        print(f"{'GAME OVER':^80}")
     print("="*80)
-    print(f"{message}:^80")
+    print(f"{message:^80}")
+    print(f"{'Thank you for playing, feel free to play again anytime!':^80}")
     print("-"*80)
     clear_screen(None)
     continua = Choice("What now?", "Play again", "Exit")
     match continua:
         case "Play again":
-            pass
+            raise RestartGame()
         case "Exit":
             sys.exit("Thank you for playing!")
 
@@ -1547,18 +1637,21 @@ def main():
     print("=" * 80)
     print(f"{'Welcome!':^80}")
     print("This is a Terminal RPG made from scratch in Python as the final project for CS50p.")
-    print("This game was made with a love of care, and I hope you enjoy your experience.")
+    print("This game was made with a lot of care, and I hope you enjoy your experience.")
     print(f"{'Have fun!':^80}")
     print("=" * 80, reset)
     while True:
-        main_menu()
-        player = story_1()
-        story_2(player)
-        story_3(player)
-        story_4(player)
-        story_5(player)
-        story_end(player)
-        game_over(player)
+        try:
+            main_menu()
+            player = story_1()
+            story_2(player)
+            story_3(player)
+            story_4(player)
+            story_5(player)
+            venceu = story_end(player)
+            game_over(player, won=venceu)
+        except RestartGame:
+            continue
 
 if __name__ == "__main__":
     main()

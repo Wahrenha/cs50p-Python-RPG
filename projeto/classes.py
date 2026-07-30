@@ -14,7 +14,7 @@ magenta = "\033[95m"
 cyan = "\033[96m"
 blue = "\033[94m"
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 
 class Dice:
@@ -42,7 +42,7 @@ class Armor:
 #Weapon init method receives the name of the weapon, which will be used to define the atributtes of the object
     #The weapon must be one of 5 options: Bow, Spell, Sword, Mace, or Knife
     def __init__(self, armor):
-        self.type = armor
+        self._type = armor
 
     #Weapon str method will return what weapon the object is, which will be stored in weapon.type
     def __str__(self):
@@ -55,7 +55,7 @@ class Armor:
     @_type.setter
     def _type(self, armor):
         if not armor in ["Leather", "Wood", "Iron", "Steel", "Rebellion"]:
-            raise ValueError("Inexistant armor")
+            raise ValueError("Inexistent armor")
         self.type = armor
 
     def protection(self):
@@ -98,7 +98,7 @@ class Weapon:
     #Weapon init method receives the name of the weapon, which will be used to define the atributtes of the object
     #The weapon must be one of 5 options: Bow, Spell, Sword, Mace, or Knife
     def __init__(self, weapon):
-        self.type = weapon
+        self._type = weapon
 
     #Weapon str method will return what weapon the object is, which will be stored in weapon.type
     def __str__(self):
@@ -149,13 +149,15 @@ class Weapon:
             case "Sword":
                 properties = "A versatile weapon, which mixes agility and strength. Very useful for warriors."
             case "Fireball Scroll":
-                properties = "A piece of magic, which causes a big explosion and damages your oponnents. Best for wizards"
+                properties = "A piece of magic, which causes a big explosion and damages your opponents. Best for wizards"
             case "Mace":
                 properties = "A huge and high damaging weapon, takes a lot of strength to use. Perfect for ogres."
             case "Knife":
                 properties = "A subtle but tricky weapon, best for fast and stealth attacks. Very recommended for thieves."
             case "Bow":
                 properties = "A high range, and technical weapon, also causes a lot of damage. Wonderful for Archers."
+            case "Army Sword":
+                properties = "The strongest weapon there is, but restricted to the king's army."
         return properties
 
 
@@ -226,11 +228,13 @@ class Potions:
             case "Healing":
                 properties = "This potion will heal your injuries and get you brand new!"
             case "Strength":
-                properties = "This potion will make you stronger and ready do fight!"
+                properties = "This potion will make you stronger and ready to fight!"
             case "Quickness":
-                properties = "This potion will make you fast and agile, you will be faster than your oponnent!"
+                properties = "This potion will make you fast and agile, you will be faster than your opponent!"
             case "Resistance":
                 properties = "This potion will make you super resistant, you won't feel a thing!"
+            case "Super Healing":
+                properties = "This potion will heal all your wounds and magically make you completely unharmed!"
         return properties
 
 
@@ -352,7 +356,7 @@ class Classe:
             case "Archer":
                 return "Archers are great distance shooters, which makes them very good attackers, but also fragile."
             case "Wizard":
-                return "Wizards use their enviable magic to cast spells which may cause a very large damage. They are also quiet fragile."
+                return "Wizards use their enviable magic to cast spells which may cause a very large damage. They are also quite fragile."
             case "Warrior":
                 return "Warriors are tough, they mix resistance and strength to the limit, but lack the speed and inteligence to make it perfect."
             case "Ogre":
@@ -545,23 +549,23 @@ class Character():
 #   First of all, it checks if the character on which level the character is, based on the xp necessary set on the l dict
 
         if not newlevel:
-            if xp > l["level_10"]:
+            if xp >= l["level_10"]:
                 newlevel = 10
-            elif xp > l["level_9"]:
+            elif xp >= l["level_9"]:
                 newlevel = 9
-            elif xp > l["level_8"]:
+            elif xp >= l["level_8"]:
                 newlevel = 8
-            elif xp > l["level_7"]:
+            elif xp >= l["level_7"]:
                 newlevel = 7
-            elif xp > l["level_6"]:
+            elif xp >= l["level_6"]:
                 newlevel = 6
-            elif xp > l["level_5"]:
+            elif xp >= l["level_5"]:
                 newlevel = 5
-            elif xp > l["level_4"]:
+            elif xp >= l["level_4"]:
                 newlevel = 4
-            elif xp > l["level_3"]:
+            elif xp >= l["level_3"]:
                 newlevel = 3
-            elif xp > l["level_2"]:
+            elif xp >= l["level_2"]:
                 newlevel = 2
             elif xp >= l["level_1"]:
                 newlevel = 1
@@ -737,21 +741,24 @@ class Character():
                             self.inventory["Armor"] = item
                             self.protection = self.stats
                             if want_print:
-                                print(green, "Your protection now is:", self.protection, reset)
+                                print(green, end="")
+                                print("Your protection now is:", self.protection, reset)
+                                print("\n")
                             break
                         elif want == "No":
-                            return None
+                            return False
                         else:
                             raise TypeError
 
                     except TypeError:
-                        print("\nPlese type the number corresponded to your answer, 1 or 2")
+                        print("\nPlease type the number corresponded to your answer, 1 or 2")
                         continue
             else:
                 self.inventory["Armor"] = item
                 self.protection = self.stats
                 if want_print:
                     print(green, "Your protection now is:", self.protection, reset)
+                return True
 
         elif type(item) == Weapon:
             if want_print:
@@ -765,7 +772,7 @@ class Character():
                             self.inventory["Weapon"] = item
                             break
                         elif want == "No":
-                            return None
+                            return False
                         else:
                             raise TypeError
 
@@ -774,6 +781,7 @@ class Character():
                         continue
             else:
                 self.inventory["Weapon"] = item
+                return True
 
         elif type(item) == Potions:
             if want_print:
@@ -796,12 +804,12 @@ class Character():
                                 player_potions.append(i)
                         choice_2 = Choice("What potion do you want to replace?", *player_potions, "Go Back")
                         if choice_2 == "Go Back":
-                            pass
+                            return False
                         else:
                             index = self.inventory["Potions"].index(choice_2)
                             self.inventory["Potions"][index]  = item
                     case "No":
-                        pass
+                        return False
 
             else:
                 for i in self.inventory["Potions"]:
@@ -812,6 +820,7 @@ class Character():
                         break
                 if not t:
                     self.inventory["Potions"].append(item)
+                    return True
         else:
             n, coins = item.split(" ")
             if coins == "coins":
@@ -829,17 +838,17 @@ class Character():
         self.inventory["XP"] += n
         self.level_up()
 
-#   Lastly, this method performs an attack for the character, taking the oponnent as an argument
-    def attack(self, oponnent, nk = False):
+#   Lastly, this method performs an attack for the character, taking the opponent as an argument
+    def attack(self, opponent, nk = False):
 
         damage = self.damage()
-        pro = round(oponnent.protection/10)
+        pro = round(opponent.protection/10)
         pro = int(pro)
         damage = int(damage)
         damage -=  pro
         if damage <= 0:
             damage = 0
-        print(f"\n{self.name} tries to attack {oponnent.name}")
+        print(f"\n{self.name} tries to attack {opponent.name}")
         sleep(1)
 
 #   The method checks if the character has weapons, to then check if the attack hits
@@ -852,12 +861,12 @@ class Character():
                 sleep(1)
                 return None
 
-#   This method then calls the take damage method, and prints the damage taken and the hp of the oponnent
+#   This method then calls the take damage method, and prints the damage taken and the hp of the opponent
         if nk:
-            if damage >= oponnent.hp:
-                damage = oponnent.hp - 1
+            if damage >= opponent.hp:
+                damage = opponent.hp - 1
 
-        oponnent.take_damage(damage)
+        opponent.take_damage(damage)
 
 
 
@@ -928,7 +937,7 @@ def Choice(text: str, option_1, option_2, option_3 = None, option_4 = None, opti
             if selected is not None:
                 return selected
             else:
-                print("Number out of range.")
+                print("Number out of range.\n")
                 sleep(1)
                 continue
 
