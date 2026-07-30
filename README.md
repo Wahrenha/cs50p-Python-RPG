@@ -6,12 +6,6 @@ The project is divided between a file that keeps the classes on which the mechan
 
 ---
 
-## ⚠️ Project Status Note
-> **Development Status:** *Mechanics Complete / Story Work-in-Progress (WIP)*
-> All core engines — including the turn-based combat system, dynamic shop logic, strict inventory memory buffers, leveling math, and large-scale army warfare algorithms — are **100% completed, fully optimized, and tested**. The main narrative campaign is playable up to the dramatic climax inside the King's secret fortress, with only final wrap-up story details currently in active writing.
-
----
-
 ## ⚙️ Core Classes & Modules
 
 * **`Dice`:** Creates an $N$-sided physical die using Python's `random` module, processing game elements like accuracy, damage rolls, healing, and stat-checks.
