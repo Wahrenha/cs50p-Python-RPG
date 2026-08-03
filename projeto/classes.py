@@ -39,16 +39,16 @@ class Dice:
 
 class Armor:
 
-#Weapon init method receives the name of the weapon, which will be used to define the atributtes of the object
-    #The weapon must be one of 5 options: Bow, Spell, Sword, Mace, or Knife
+#armor init method receives the name of the armor, which will be used to define the atributtes of the object
+    #The armor must be one of 5 options: Leather, wood, iron, stell or rebellion
     def __init__(self, armor):
         self._type = armor
 
-    #Weapon str method will return what weapon the object is, which will be stored in weapon.type
+    #armor str method will return what armor the object is, which will be stored in armor.type
     def __str__(self):
         return f"{self.type} Armor"
 
-    #_type method stores the weapon type, that being which weapon it is in the available options
+    #_type method stores the armor type, that being which armor it is in the available options
     @property
     def _type(self):
         return self.type
@@ -58,6 +58,7 @@ class Armor:
             raise ValueError("Inexistent armor")
         self.type = armor
 
+    # this method returns the protection that each type of armor giver
     def protection(self):
         armor = self.type
         protection = 0
@@ -75,6 +76,7 @@ class Armor:
 
         return protection
 
+    #the properties of the weapon, which are printed when the player is given the option to take them in a chest or commerce
     def properties(self):
         weapon = self._type
         match weapon:
@@ -159,9 +161,6 @@ class Weapon:
             case "Army Sword":
                 properties = "The strongest weapon there is, but restricted to the king's army."
         return properties
-
-
-
 
 
 #Seting also a Potions class to store info for the potions
@@ -319,6 +318,7 @@ class Classe:
 
         self._stats = stat
 
+    #this method prints the stats, but formatted 
     def print_stats(self):
 
         statline = self.stats
@@ -530,7 +530,7 @@ class Character():
 
 #   This method is called to level up the character
 #   Every time the character gets xp, this method is called
-
+#   if want_print is false, a character different than the player is levelling up, so the game stays silent
     def level_up(self, newlevel=None, want_print=True):
         xp = self.inventory["XP"]
         l = {
@@ -577,10 +577,7 @@ class Character():
             print(f"{green}Congratulations!!! {self.name} has reached level {newlevel}!{reset}")
             sleep(3)
 
-
 #   Leveling up grants the character a choice on which stat to improve for level gained
-
-
 
             for _ in range(levels_gained):
                 print(green,"\n\nPlayer's current statline:", reset)
@@ -628,24 +625,18 @@ class Character():
 #   We can be sure of that because there are only two places where the method is called: init and level_up
 
             self._max_hp = n
-
-
 #   So if level is not 1, it is being called in level_up, and receives the number of levels gained as n
 #   Now, the max hp will be increase by 5 for level gained
-
         else:
             self._max_hp += (5*n)
-
 
 #   This method is called when the character take damage
 
     def take_damage(self, damage, want_print=True):
 
 #  Applies the final calculated damage to the character's HP.
-
-
         self.hp = round(self.hp - damage, 2)
-
+#         If want_print is false, it means that the game is deducting the villains hp so the battle is easier, and the game stays silent
         if want_print:
             print(f"\n{red}{self.name} took {damage} damage{reset}\n")
             sleep(1)
@@ -664,6 +655,7 @@ class Character():
 
 
 #   This method heals the character, receiving the amount of hp to be restored
+#   if want_print is false, the game stays silent
     def heal(self, heal:int, want_print=True):
 
         new_hp = self.hp + heal
@@ -680,6 +672,9 @@ class Character():
     @property
     def inventory(self):
         return self._inventory
+
+#   inventory setter receives a as an argument. If a is a dictionary, it means that it is being changed to a pre determined inventory
+#   but it isnt, it means that it is being called in a default way to create an empty inventory
     @inventory.setter
     def inventory(self, a):
         if(type(a) == dict):
@@ -697,7 +692,7 @@ class Character():
 #   This method prints the character's inventory
     def print_inventory(self):
 
-#   The method checks if there are weapons and potions in the inventory, and prints the result depending on that
+#   The method checks if there are weapons, armors and potions in the inventory, and prints the result depending on that
         armor_name = self.inventory['Armor'].type if self.inventory['Armor'] else "None"
         weapon_name = self.inventory['Weapon'].type if self.inventory['Weapon'] else "None"
         list_potions = [p.type for p in self.inventory['Potions'] if isinstance(p, Potions)]
@@ -728,6 +723,8 @@ class Character():
     def take_item(self, item, want_print=True):
 
 #   The method checks the type(class) of the item, to put it in the right place
+#   want_print exists to make sure that if an item is given to a character other than the player, the games stays silent
+#   The method returns True or False indicating if the player really took the item
         t = 0
         if type(item) == Armor:
             if want_print:
@@ -736,6 +733,7 @@ class Character():
             if self.inventory["Armor"]:
                 while True:
                     try:
+#                       if the player already has an armor, checks if they want to trade it, to avoid mistakes
                         want = Choice(f"\nAre you sure you want to trade {self.inventory['Armor']} for {item}", "Yes", "No")
                         if  want == "Yes":
                             self.inventory["Armor"] = item
@@ -744,7 +742,7 @@ class Character():
                                 print(green, end="")
                                 print("Your protection now is:", self.protection, reset)
                                 print("\n")
-                            break
+                            return True
                         elif want == "No":
                             return False
                         else:
@@ -767,10 +765,11 @@ class Character():
             if self.inventory["Weapon"]:
                 while True:
                     try:
+#                       Checks if the player wants to trade his weapon
                         want = Choice(f"\nAre you sure you want to trade {self.inventory['Weapon']} for {item}", "Yes", "No")
                         if  want == "Yes":
                             self.inventory["Weapon"] = item
-                            break
+                            return True
                         elif want == "No":
                             return False
                         else:
@@ -791,12 +790,15 @@ class Character():
             for i in self.inventory["Potions"]:
                 if type(i) == Potions:
                     potions_number += 1
+
+#           This procedure happens when the player reached the limit of 5 potions, and tries to take another one
             if potions_number >= 5:
                 print(red,"\n\nYou've reached the potions limit in your inventory.", reset)
                 sleep(1)
                 self.print_inventory()
                 choice = Choice("Do you want to take it and replace a potion in your inventory?", "Yes", "No")
                 match choice:
+#                   Checks if the player wants to replace a potion he already has for the new one
                     case "Yes":
                         player_potions = []
                         for i in self.inventory["Potions"]:
@@ -808,16 +810,17 @@ class Character():
                         else:
                             index = self.inventory["Potions"].index(choice_2)
                             self.inventory["Potions"][index]  = item
+                            return True
                     case "No":
                         return False
-
+#           If the player had less than 5 potions, it comes directly here
             else:
                 for i in self.inventory["Potions"]:
                     if i == None:
                         index = self.inventory["Potions"].index(i)
                         self.inventory["Potions"][index] = item
                         t = 1
-                        break
+                        return True
                 if not t:
                     self.inventory["Potions"].append(item)
                     return True
@@ -829,7 +832,9 @@ class Character():
                     print(f"{green}You took {item}!!{reset}\n")
                     sleep(1)
                 self.inventory["Money"] += n
+                return True
             else:
+#               if it doesnt match any of the cases
                 raise ValueError("\n\nThe item taken must be a Weapon, Potion or a number of coins")
 
 #   This method increases the xp of the character, according to the n argument
@@ -841,6 +846,7 @@ class Character():
 #   Lastly, this method performs an attack for the character, taking the opponent as an argument
     def attack(self, opponent, nk = False):
 
+#       subtracts 10% of the opponent protection off the damage       
         damage = self.damage()
         pro = round(opponent.protection/10)
         pro = int(pro)
@@ -904,6 +910,7 @@ def accuracy(character, weapon):
             return aim >= roll_4
         case "Army Sword":
             return aim >= roll_8
+        
 #   Choice function receives multiple options and let player choose between them
 def Choice(text: str, option_1, option_2, option_3 = None, option_4 = None, option_5 = None, option_6 = None):
 
@@ -931,9 +938,9 @@ def Choice(text: str, option_1, option_2, option_3 = None, option_4 = None, opti
                 case 5: selected = option_5
                 case 6: selected = option_6
                 case _:
-                    pass # Número fora de 1-6 cai aqui e selected continua None
+                    pass # If the number is different than 6, it skips
 
-            # O "Guard Clause": Se for None, é inválido. Não retorna, repete o loop.
+#           To avoid raising an error, it returns none
             if selected is not None:
                 return selected
             else:
@@ -945,18 +952,21 @@ def Choice(text: str, option_1, option_2, option_3 = None, option_4 = None, opti
             print("Please enter a valid number.")
             sleep(1)
             continue
-            
+
+# simple function to make it easier to print lists
 def unlister(*args):
     argument = str(args)
     argument = argument.replace("'", "")
     return argument.strip("()")
 
-
+# This function handles the story telling of the game
 def print_slow(text, color=None, jumpline=True):
 
+#   The library textwrap is called to make sure that the text fits in a width of 80, to make the game look good regardless of the monitor
     c = ""
     a = textwrap.fill(text, width=80, drop_whitespace=False)
     if color:
+#       This part makes the text colored, according to the ascii codes for the color declared in the beggining of the file
         match color:
             case "Red": c = red
             case "Green": c = green
@@ -965,12 +975,15 @@ def print_slow(text, color=None, jumpline=True):
             case "Cyan": c = cyan
             case "Blue": c = blue
             case _: raise ValueError("Color is not equivalent!")
+
+#   if it is in debug mode it doesnt print slowly
     if DEBUG_MODE:
         if color:
             sys.stdout.write(f"{c}{a}{reset}")
         else:
             sys.stdout.write(a)
     elif not color:
+#   If it is not in debug mode, prints each letter separetly with a 0.04s time interval between letters
         for _ in a:
             sys.stdout.write(_)
             sys.stdout.flush()
@@ -980,6 +993,7 @@ def print_slow(text, color=None, jumpline=True):
             sys.stdout.write(f"{c}{_}{reset}")
             sys.stdout.flush()
             sleep(0.04)
+#   If jumpline is false, it doesnt break a line
+#   This happens when the game makes a pause in printing the line for dramatic effect
     if jumpline:
         print("\n")
-
