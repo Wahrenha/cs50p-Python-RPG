@@ -1,7 +1,5 @@
 # Terminal RPG in Python ⚔️🎲
 
-#### Video Demo: https://youtu.be/FS37rm_32Sw
-
 A text-based RPG built from scratch in **Python**. Developed as a final project for Harvard's **CS50P: Introduction to Programming with Python**, the game features character creation, item management, stats and leveling systems, turn-based combat, an original story, and a choice system that changes the player's experience depending on the chosen paths, along with new mechanics implemented in the game to make it more dynamic and fun.
 
 The project is divided between `classes.py`, a file that keeps the classes on which the mechanics are based, and `project.py` the main game file.
